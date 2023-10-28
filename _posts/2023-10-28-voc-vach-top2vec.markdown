@@ -85,6 +85,7 @@ Giải thích thuật toán:
     - If the number of neighbors found in this query is greater than or equal to **`minPts`**, those neighbors are added to the seed set **`S`**.
 9. The algorithm continues this process until all points in the database **`DB`** have been assigned to a cluster or labeled as noise.
 
+
 ![Screen Shot 2023-10-28 at 15.53.12.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/d1328f7f-310a-4398-bb82-3e1698f21657/beb3c259-f504-4294-a872-26af7ca14dde/Screen_Shot_2023-10-28_at_15.53.12.png)
 
 Dùng UMAP để giảm dimension trước khi caculate
