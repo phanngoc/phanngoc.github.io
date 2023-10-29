@@ -1,26 +1,24 @@
----
-layout: post
-title:  "Vọc vạch sơ top2vec, và bài toán tìm topic !"
-date:   2017-11-25 11:52:21 +0700
-categories: jekyll update
----
+# [viblo] Vọc vạch sơ top2vec, và bài toán tìm topic
+
+Status: In progress
+
 Hôm nay mình sẽ chia sẻ hẳn 1 thư viện mà mình mới nghía qua gần đây về **topic modeling** và s**emantic search.** Đó là **top2vec** (https://github.com/ddangelov/Top2Vec)  
 
-Chắc hẳn trong chúng ta đã từng nghe tới bài toán cluster về việc tìm **topic modeling** từ một đống các document. Yes, và hẳn gensim là 1 thư viện cực kì nổi tiếng
+Chắc hẳn trong chúng ta đã từng nghe tới bài toán cluster về việc tìm **topic modeling** từ một đống các document. Yes, và hẳn gensim là 1 thư viện cực kì nổi tiếng.
 
 Gensim đến với 2 thuật toán :
 
 Latent Dirichlet Allocation and Probabilistic Latent Semantic Analysis
 
-Dùng cấu trúc doc2vec để contruct
+Dùng cấu trúc doc2vec để cấu hình cấu trúc dữ liệu.
 
-![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/d1328f7f-310a-4398-bb82-3e1698f21657/7fcfd0c0-3d1c-483b-afe8-77c5e79b132d/Untitled.png)
+![Untitled](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/Untitled.png)
 
 Tuy nhiên nó có hạn chế là phải giả định trước số topic, và phải dựa vào [bag-of-words representation] sẽ làm mất đi thứ tự và ngữ nghĩa của câu.
 
 Top2Vec là thuật toán cho **topic modeling** và s**emantic search (**search ngữ nghĩa**)**. Nó tự động xác định topic dựa trên text, và sinh ra các khía cạnh như embedded topic, document và word vectors. Phải kể đến 1 số tính năng chính.
 
-![Screen Shot 2023-10-28 at 14.49.02.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/d1328f7f-310a-4398-bb82-3e1698f21657/b756d6d9-848d-4e86-a47f-2f4b431b481c/Screen_Shot_2023-10-28_at_14.49.02.png)
+![Screen Shot 2023-10-28 at 14.49.02.png](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/Screen_Shot_2023-10-28_at_14.49.02.png)
 
 - Phát hiện ra số lượng topic phù hợp. lấy được topics và size of topic, các topic thừa kế nhau như thế nào, tìm topic bởi keyword, hay tìm document bởi topic hoặc keyword
 - Tìm từ đồng nghĩa
@@ -28,15 +26,27 @@ Top2Vec là thuật toán cho **topic modeling** và s**emantic search (**sear
 
 Pager:
 
-https://arxiv.org/abs/2008.09470
+[https://arxiv.org/abs/2008.09470](https://arxiv.org/abs/2008.09470)
 
-Thực ra mình cũng chưa hiểu hoàn toàn cách nó cải thiện lắm, mình có đọc sơ tài liệu, cơ bản tóm gọn cho các bạn vài ý 😄
+### Để thực hiện điều này, nó cần 3 bước:
+
+1) **Create Semantic Embedding**
+
+Nó cũng sử dụng doc2vec, hoặc bert model để tạo ra sematic embedding.
+
+2) **Reduce the dimensionality of the document embedding**
+
+Để viêc cluster trở nên hiệu quả, nó sử dụng UMAP cho việc giảm chiều của dữ liệu.
+
+3) **Identify clusters of documents**
 
 Nó sử dụng HDBSCAN để tìm ra dense areas (vùng có độ đậm đặc cao ), 
 
  
 
-![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/d1328f7f-310a-4398-bb82-3e1698f21657/18d8c9a6-7186-43f0-9c71-b4a6d12d3cbd/Untitled.png)
+![Untitled](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/Untitled%201.png)
+
+![9D6aAF2.gif](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/9D6aAF2.gif)
 
 ```
 DBSCAN(DB, distFunc, eps, minPts) {
@@ -85,14 +95,15 @@ Giải thích thuật toán:
     - If the number of neighbors found in this query is greater than or equal to **`minPts`**, those neighbors are added to the seed set **`S`**.
 9. The algorithm continues this process until all points in the database **`DB`** have been assigned to a cluster or labeled as noise.
 
+![Screen Shot 2023-10-28 at 15.53.12.png](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/Screen_Shot_2023-10-28_at_15.53.12.png)
 
-![Screen Shot 2023-10-28 at 15.53.12.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/d1328f7f-310a-4398-bb82-3e1698f21657/beb3c259-f504-4294-a872-26af7ca14dde/Screen_Shot_2023-10-28_at_15.53.12.png)
+4) **Calculate centroids in the original embedding space**
 
-Dùng UMAP để giảm dimension trước khi caculate
+Cách tìm các đỉnh trung tâm của cluster để quyết định dựa trên bằng việc dùng high dimensional space, tính toán mean của các document vector thuộc về các cùng có mật độ cao (dense area)
 
-Các bạn có tham khảo nhiều hơn ở đây 
+5) **Find words for each topic vector**
 
-https://www.analyticsvidhya.com/blog/2020/09/how-dbscan-clustering-works/
+Các word vector gần với document vector sẽ là các từ đại diện cho topic.
 
 ## Sample code tranning dùng top2vec
 
@@ -213,3 +224,11 @@ topic_words, word_scores, topic_scores, topic_nums = model.search_topics(keyword
 for topic in topic_nums:
     model.generate_topic_wordcloud(topic)
 ```
+
+![output.png](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/output.png)
+
+![output2.png](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/output2.png)
+
+![output3.png](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/output3.png)
+
+![output4.png](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/output4.png)
