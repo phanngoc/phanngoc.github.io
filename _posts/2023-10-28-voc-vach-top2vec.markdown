@@ -12,13 +12,13 @@ Latent Dirichlet Allocation and Probabilistic Latent Semantic Analysis
 
 Dùng cấu trúc doc2vec để cấu hình cấu trúc dữ liệu.
 
-![Untitled](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/Untitled.png)
+![Untitled](/assets/images/voc-vach-top2vec/Untitled.png)
 
 Tuy nhiên nó có hạn chế là phải giả định trước số topic, và phải dựa vào [bag-of-words representation] sẽ làm mất đi thứ tự và ngữ nghĩa của câu.
 
 Top2Vec là thuật toán cho **topic modeling** và s**emantic search (**search ngữ nghĩa**)**. Nó tự động xác định topic dựa trên text, và sinh ra các khía cạnh như embedded topic, document và word vectors. Phải kể đến 1 số tính năng chính.
 
-![Screen Shot 2023-10-28 at 14.49.02.png](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/Screen_Shot_2023-10-28_at_14.49.02.png)
+![Screen Shot 2023-10-28 at 14.49.02.png](/assets/images/voc-vach-top2vec/Screen_Shot_2023-10-28_at_14.49.02.png)
 
 - Phát hiện ra số lượng topic phù hợp. lấy được topics và size of topic, các topic thừa kế nhau như thế nào, tìm topic bởi keyword, hay tìm document bởi topic hoặc keyword
 - Tìm từ đồng nghĩa
@@ -44,9 +44,9 @@ Nó sử dụng HDBSCAN để tìm ra dense areas (vùng có độ đậm đặc
 
  
 
-![Untitled](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/Untitled%201.png)
+![Untitled](/assets/images/voc-vach-top2vec/Untitled%201.png)
 
-![9D6aAF2.gif](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/9D6aAF2.gif)
+![9D6aAF2.gif](/assets/images/voc-vach-top2vec/9D6aAF2.gif)
 
 ```
 DBSCAN(DB, distFunc, eps, minPts) {
@@ -95,7 +95,7 @@ Giải thích thuật toán:
     - If the number of neighbors found in this query is greater than or equal to **`minPts`**, those neighbors are added to the seed set **`S`**.
 9. The algorithm continues this process until all points in the database **`DB`** have been assigned to a cluster or labeled as noise.
 
-![Screen Shot 2023-10-28 at 15.53.12.png](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/Screen_Shot_2023-10-28_at_15.53.12.png)
+![Screen Shot 2023-10-28 at 15.53.12.png](/assets/images/voc-vach-top2vec/Screen_Shot_2023-10-28_at_15.53.12.png)
 
 4) **Calculate centroids in the original embedding space**
 
@@ -225,10 +225,10 @@ for topic in topic_nums:
     model.generate_topic_wordcloud(topic)
 ```
 
-![output.png](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/output.png)
+![output.png](/assets/images/voc-vach-top2vec/output.png)
 
-![output2.png](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/output2.png)
+![output2.png](/assets/images/voc-vach-top2vec/output2.png)
 
-![output3.png](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/output3.png)
+![output3.png](/assets/images/voc-vach-top2vec/output3.png)
 
-![output4.png](%5Bviblo%5D%20Vo%CC%A3c%20va%CC%A3ch%20so%CC%9B%20top2vec,%20va%CC%80%20ba%CC%80i%20toa%CC%81n%20ti%CC%80%202b489a2439b845718aa90a50f65b43b2/output4.png)
+![output4.png](/assets/images/voc-vach-top2vec/output4.png)
