@@ -1,4 +1,4 @@
-# [viblo] Vọc vạch sơ top2vec, và bài toán tìm topic
+# Vọc vạch sơ top2vec, và bài toán tìm topic
 
 
 Hôm nay mình sẽ chia sẻ hẳn 1 thư viện mà mình mới nghía qua gần đây về **topic modeling** và s**emantic search.** Đó là **top2vec** (https://github.com/ddangelov/Top2Vec)  
