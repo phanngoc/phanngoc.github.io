@@ -90,7 +90,7 @@ Các công nghệ nén và xử lý:
 
 ### Sơ đồ minh họa thang bậc
 
-```mermaid
+<div class="mermaid">
 graph TD
     A["🌌 Giác quan thứ 6<br/>(Trực giác, cảm xúc, đồng cảm)<br/>Entropy: Latent Space"] --> B["🧠 Tư duy trừu tượng<br/>(Khái niệm, lý thuyết, mô hình)<br/>Entropy: Thấp"]
     B --> C["📝 Ngôn ngữ - Ký hiệu<br/>(Chữ viết, lời nói, ký hiệu)<br/>Entropy: Trung bình"]
@@ -105,7 +105,7 @@ graph TD
     style B fill:#ffcc99
     style C fill:#99ccff
     style D fill:#99ff99
-```
+</div>
 
 ### Mô tả thang bậc
 

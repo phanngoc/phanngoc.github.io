@@ -1,0 +1,9 @@
+---
+description: Quy tắc áp dụng cho dự án blog Jekyll
+globs:
+  - "_posts/**/*.md"
+  - "_layouts/**/*.html"
+  - "_includes/**/*.html"
+  - "_config.yml"
+alwaysApply: true
+---
