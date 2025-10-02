@@ -1,0 +1,52 @@
+/* Mermaid Diagram Styling */
+.mermaid {
+  text-align: center;
+  margin: 20px 0;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #e9ecef;
+}
+
+/* Ensure Mermaid diagrams are responsive */
+.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Style for Mermaid code blocks */
+pre code.language-mermaid {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Override Jekyll's code block styling for Mermaid */
+pre.language-mermaid {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  overflow-x: auto;
+}
+
+/* Ensure proper spacing around Mermaid diagrams */
+.mermaid + p,
+p + .mermaid {
+  margin-top: 20px;
+}
+
+/* Dark mode support for Mermaid */
+@media (prefers-color-scheme: dark) {
+  .mermaid {
+    background: #2d3748;
+    border-color: #4a5568;
+  }
+  
+  pre.language-mermaid {
+    background: #2d3748;
+    border-color: #4a5568;
+  }
+}
