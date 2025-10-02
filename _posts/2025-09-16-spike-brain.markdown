@@ -1,241 +1,489 @@
 ---
 layout: post
-title: "SpikingBrain: Kiến trúc AI lấy cảm hứng từ não bộ cho mô hình lớn"
-excerpt: "Khám phá SpikingBrain - một kiến trúc AI tiên tiến lấy cảm hứng từ cơ chế hoạt động của não bộ, giúp mô hình lớn chạy nhanh hơn 100 lần và tiết kiệm năng lượng đáng kể."
+title: "SpikingBrain: Brain-Inspired AI Architecture for Large Models"
+excerpt: "Explore SpikingBrain - an advanced AI architecture inspired by brain mechanisms, enabling large models to run 100x faster while significantly saving energy."
 ---
 
-## Giới thiệu
+## Introduction
 
-Trong thời đại AI phát triển mạnh mẽ, việc tạo ra các mô hình lớn (Large Language Models) hiệu quả và tiết kiệm năng lượng đang trở thành thách thức lớn. **SpikingBrain** ra đời như một giải pháp đột phá, lấy cảm hứng từ cơ chế hoạt động của não bộ để tạo ra các mô hình AI vừa mạnh mẽ vừa tiết kiệm tài nguyên.
+In the era of rapidly developing AI, creating efficient and energy-saving large language models has become a major challenge. **SpikingBrain** emerges as a breakthrough solution, inspired by brain mechanisms to create AI models that are both powerful and resource-efficient.
 
-## Tại sao cần SpikingBrain?
+## Why SpikingBrain?
 
-### Vấn đề hiện tại
-- **Chi phí tính toán khổng lồ**: Các mô hình lớn như GPT-4 cần hàng triệu USD để huấn luyện
-- **Tiêu thụ năng lượng cao**: Một lần inference có thể tiêu tốn năng lượng đáng kể
-- **Phụ thuộc vào phần cứng NVIDIA**: Hạn chế khả năng mở rộng và tăng chi phí
+### Current Problems
+- **Massive computational costs**: Large models like GPT-4 require millions of USD for training
+- **High energy consumption**: A single inference can consume significant energy
+- **NVIDIA hardware dependency**: Limits scalability and increases costs
 
-### Giải pháp từ SpikingBrain
-- **Hiệu suất cao hơn 100 lần**: Thời gian sinh token đầu tiên nhanh hơn 100x
-- **Tiết kiệm 69% tính toán**: Chỉ 31% neuron hoạt động tại mỗi thời điểm
-- **Huấn luyện với ít dữ liệu hơn**: Chỉ cần <2% dữ liệu so với mô hình truyền thống
-- **Tương thích đa nền tảng**: Chạy tốt trên cả NVIDIA và non-NVIDIA clusters
+### SpikingBrain Solutions
+- **100x higher performance**: First token generation time is 100x faster
+- **69% computation savings**: Only 31% of neurons are active at any given time
+- **Training with less data**: Requires <2% data compared to traditional models
+- **Multi-platform compatibility**: Runs well on both NVIDIA and non-NVIDIA clusters
 
-## Cơ chế hoạt động của SpikingBrain
+## How SpikingBrain Works
 
-### 1. Cơ chế lấy cảm hứng từ não bộ
+### 1. Brain-Inspired Mechanisms
 
-#### Event-driven Processing (Xử lý theo sự kiện)
-Thay vì xử lý liên tục như mô hình truyền thống, SpikingBrain chỉ hoạt động khi có tín hiệu đầu vào, giống như neuron trong não người:
+#### Event-driven Processing
+Instead of continuous processing like traditional models, SpikingBrain only activates when there's input signal, similar to neurons in the human brain:
 
 ```
-Neuron chỉ "bắn" khi đạt ngưỡng kích thích
-→ Tiết kiệm năng lượng đáng kể
-→ Tăng tốc độ xử lý
+Neurons only "fire" when reaching stimulation threshold
+→ Significant energy savings
+→ Increased processing speed
 ```
 
-#### Modular Architecture (Kiến trúc mô-đun)
-- Chia mô hình thành các module chuyên biệt
-- Mỗi module xử lý một loại nhiệm vụ cụ thể
-- Chỉ kích hoạt module cần thiết → Giảm chi phí tính toán
+#### Modular Architecture
+- Divide the model into specialized modules
+- Each module handles a specific type of task
+- Only activate necessary modules → Reduce computational costs
 
-#### Adaptive Memory (Bộ nhớ thích nghi)
-- Sử dụng cơ chế nén thông tin thông minh
-- Cập nhật trạng thái theo chuỗi Markov
-- Tối ưu hóa việc lưu trữ và truy xuất dữ liệu
+#### Adaptive Memory
+- Use intelligent information compression mechanisms
+- Update state according to Markov chain
+- Optimize data storage and retrieval
 
-### 2. Kiến trúc mô hình
+### 2. Model Architecture
 
-#### Spike Encoding (Mã hóa xung)
-- Chuyển đổi dữ liệu thành chuỗi xung nhị phân (0/1)
-- Sử dụng số nguyên thay vì số thực → Tiết kiệm bộ nhớ và năng lượng
-- Chỉ tính toán khi có xung → Giảm FLOPs
+#### Spike Encoding
+- Convert data into binary spike sequences (0/1)
+- Use integers instead of floating-point numbers → Save memory and energy
+- Only compute when spikes occur → Reduce FLOPs
 
-#### Hybrid Linear Models (Mô hình tuyến tính lai)
-- Kết hợp hai con đường xử lý:
-  - **Spike path**: Xử lý đơn giản, tiết kiệm năng lượng
-  - **Integer path**: Xử lý chính xác cho các tác vụ phức tạp
-- Tự động chọn con đường phù hợp
+#### Hybrid Linear Models
+- Combine two processing pathways:
+  - **Spike path**: Simple processing, energy-efficient
+  - **Integer path**: Precise processing for complex tasks
+- Automatically select appropriate pathway
 
 #### Mixture of Experts (MoE)
-- Chia mạng thành nhiều "chuyên gia" (experts)
-- Chỉ kích hoạt 2-4 experts cho mỗi token
-- Giảm chi phí từ O(M) xuống O(k) với k << M
+- Divide network into multiple "experts"
+- Only activate 2-4 experts per token
+- Reduce cost from O(M) to O(k) where k << M
 
-#### Efficient Attention (Attention hiệu quả)
-- Thay vì xem xét tất cả tokens, chỉ xem xét ~32K tokens quan trọng nhất
-- Giảm độ phức tạp từ O(n²) xuống O(n×m) với m << n
-- Đặc biệt hiệu quả với context dài (4M+ tokens)
+#### Efficient Attention
+- Instead of considering all tokens, only consider ~32K most important tokens
+- Reduce complexity from O(n²) to O(n×m) where m << n
+- Particularly efficient with long context (4M+ tokens)
 
-## Kết quả ấn tượng
+## Impressive Results
 
-### Hiệu suất tính toán
-- **Sparsity > 69%**: Hơn 69% neuron ở trạng thái "nghỉ"
-- **Speedup > 100x**: Tăng tốc hơn 100 lần cho TTFT (Time To First Token)
-- **Memory efficient**: Giảm 125x chi phí attention
+### Computational Performance
+- **Sparsity > 69%**: More than 69% of neurons in "rest" state
+- **Speedup > 100x**: 100x faster for TTFT (Time To First Token)
+- **Memory efficient**: 125x reduction in attention cost
 
-### Hiệu quả huấn luyện
-- **< 2% data resource**: Chỉ cần ít hơn 2% dữ liệu so với mô hình truyền thống
-- **Conversion-based training**: Có thể chuyển đổi từ mô hình Transformer có sẵn
-- **Train from scratch**: Huấn luyện mới với hiệu quả cao
+### Training Efficiency
+- **< 2% data resource**: Requires less than 2% data compared to traditional models
+- **Conversion-based training**: Can convert from existing Transformer models
+- **Train from scratch**: New training with high efficiency
 
-### Tương thích phần cứng
-- **Non-NVIDIA support**: Tối ưu cho MetaX và các cluster khác
-- **CUDA/Triton kernels**: Hỗ trợ đầy đủ các toán tử tối ưu
-- **Neuromorphic chips**: Hướng tới phần cứng chuyên dụng
+### Hardware Compatibility
+- **Non-NVIDIA support**: Optimized for MetaX and other clusters
+- **CUDA/Triton kernels**: Full support for optimized operators
+- **Neuromorphic chips**: Towards specialized hardware
 
-## Công thức toán học cốt lõi
+## Core Mathematical Formula
 
-Để hiểu rõ hơn về hiệu quả của SpikingBrain, ta có công thức tổng quát:
+To better understand SpikingBrain's efficiency, we have the general formula:
 
+$$R = \alpha \times \frac{m}{n} + (1-\alpha) \times a \times \frac{k}{M}$$
+
+Where:
+- $\alpha$: Attention cost ratio compared to total
+- $\frac{m}{n}$: Attention reduction ratio ($m \ll n$)
+- $a$: Active neuron ratio ($a = 1 - \text{sparsity}$)
+- $\frac{k}{M}$: Activated experts ratio
+
+**Real example:**
+- $n = 4M$ tokens, $m = 32K$ → $\frac{m}{n} \approx 0.008$
+- Sparsity = 69% → $a = 0.31$
+- $M = 64$ experts, $k = 2$ → $\frac{k}{M} = 0.031$
+- $\alpha = 0.8$
+
+→ **Speedup ≈ 120x** compared to traditional dense models!
+
+## Technical Details
+
+### Event-driven Processing Mechanism
+
+The LIF (Leaky Integrate-and-Fire) model is used to simulate neuron activity:
+
+$$v_{t+1} = \lambda v_t + w^T x_t - \theta_t$$
+
+$$s_t = \begin{cases} 
+1 & \text{if } v_{t+1} > 0 \\
+0 & \text{otherwise}
+\end{cases}$$
+
+Where:
+- $v_t$: Membrane potential at time $t$
+- $\lambda$: Leak factor
+- $\theta_t$: Adaptive threshold
+- $s_t$: Spike signal (0 or 1)
+
+**Benefits**: Only compute when spikes occur → Reduce 3.2x FLOPs compared to dense models.
+
+### MoE (Mixture of Experts) Architecture
+
+**FFN cost formula:**
+$$\text{FLOPs}_{\text{MoE}} \approx \frac{k}{M} \times \text{FLOPs}_{\text{dense}}$$
+
+With spiking activity:
+$$\text{FLOPs}_{\text{effective}} \approx a \times \frac{k}{M} \times \text{FLOPs}_{\text{dense}}$$
+
+**Real example:**
+- $M = 64$ experts, $k = 2$, $a = 0.31$
+- → Reduce 103x FFN cost compared to dense model
+
+### Efficient Attention Mechanism
+
+**Attention reduction formula:**
+$$\text{FLOPs}_{\text{attention}} \approx O(n \times m \times d_k) \text{ instead of } O(n^2 \times d_k)$$
+
+**Reduction ratio:**
+$$r_{\text{attention}} = \frac{m}{n}$$
+
+**Example with long context:**
+- $n = 4M$ tokens, $m = 32K$ tokens
+- → Reduce 125x attention cost
+
+## SpikingBrain Models Architecture
+
+SpikingBrain introduces two flagship models with distinct architectural designs:
+
+### SpikingBrain-7B
+A linear attention-based model with interleaved layers:
+
+```mermaid
+graph TD
+    A[Input Tokens] --> B[Linear Attention Layer]
+    B --> C[Sliding Window Attention Layer]
+    C --> D[Linear Attention Layer]
+    D --> E[Sliding Window Attention Layer]
+    E --> F[Output Tokens]
+    
+    subgraph "Linear Attention"
+        B1[Recurrent State Computation]
+        B2[Constant Memory Usage]
+    end
+    
+    subgraph "Sliding Window Attention"
+        C1[Fixed Window Size]
+        C2[Local Dependencies]
+    end
 ```
-Tỉ lệ chi phí = α × (m/n) + (1-α) × a × (k/M)
+
+**Key Features:**
+- **Linear Attention**: Ensures constant memory usage through recurrent attention state computation
+- **Sliding Window Attention (SWA)**: Captures local dependencies with fixed window size
+- **Interleaved Design**: Alternates between linear and window attention layers
+- **Event-driven Processing**: Only activates when input signals are present
+
+### SpikingBrain-76B
+A hybrid model with parallel attention branches and MoE feed-forward:
+
+```mermaid
+graph TD
+    A[Input Tokens] --> B[Multi-Branch Attention Layer]
+    B --> C[Hybrid Feed-Forward Layer]
+    C --> D[Multi-Branch Attention Layer]
+    D --> E[Hybrid Feed-Forward Layer]
+    E --> F[Output Tokens]
+    
+    subgraph "Attention Branches"
+        B1[Linear Attention]
+        B2[Sliding Window Attention]
+        B3[Full Softmax Attention]
+    end
+    
+    subgraph "Feed-Forward Modules"
+        C1[7 Dense FFN Layers]
+        C2[MoE Experts]
+        C3[Selective Activation]
+    end
 ```
 
-Trong đó:
-- `α`: Tỷ lệ chi phí attention so với tổng thể
-- `m/n`: Tỷ lệ rút gọn attention (m << n)
-- `a`: Tỷ lệ neuron hoạt động (a = 1 - sparsity)
-- `k/M`: Tỷ lệ experts được kích hoạt
+**Key Features:**
+- **Parallel Attention**: Multiple attention branches computed simultaneously
+- **Hybrid MoE**: Large Mixture-of-Experts configuration with selective activation
+- **Stability Layers**: 7 dense feed-forward layers always active
+- **Sparse Activation**: Only subset of experts activated per token
 
-**Ví dụ thực tế:**
-- n = 4M tokens, m = 32K → m/n ≈ 0.008
-- Sparsity = 69% → a = 0.31
-- M = 64 experts, k = 2 → k/M = 0.031
-- α = 0.8
+## Training Process
 
-→ **Speedup ≈ 120x** so với mô hình dense truyền thống!
+### 1. Conversion-based Training Pipeline
+SpikingBrain utilizes a sophisticated conversion pipeline that adapts existing Transformer models:
 
-## Chi tiết kỹ thuật
-
-### Cơ chế Event-driven Processing
-
-Mô hình LIF (Leaky Integrate-and-Fire) được sử dụng để mô phỏng hoạt động của neuron:
-
-```
-v_{t+1} = λv_t + w^T x_t - θ_t
-s_t = 1 nếu v_{t+1} > 0, ngược lại = 0
-```
-
-Trong đó:
-- `v_t`: Điện thế màng tại thời điểm t
-- `λ`: Hệ số rò rỉ (leak factor)
-- `θ_t`: Ngưỡng thích nghi
-- `s_t`: Tín hiệu spike (0 hoặc 1)
-
-**Lợi ích**: Chỉ tính toán khi có spike → Giảm 3.2x FLOPs so với mô hình dense.
-
-### Kiến trúc MoE (Mixture of Experts)
-
-**Công thức chi phí FFN:**
-```
-FLOPs_MoE ≈ (k/M) × FLOPs_dense
+```mermaid
+flowchart TD
+    A[Pre-trained Transformer] --> B[Spike Conversion]
+    B --> C[Continual Pre-training]
+    C --> D[Recursive Linear Attention]
+    D --> E[Energy Optimization]
+    E --> F[SpikingBrain Model]
+    
+    subgraph "Training Data"
+        G[150B+ Tokens]
+        H[<2% of Baseline Data]
+    end
+    
+    subgraph "Hardware"
+        I[MetaX GPU Clusters]
+        J[Stable Large-scale Training]
+    end
 ```
 
-Với spiking activity:
+**Training Characteristics:**
+- **Continual Pre-training**: Over 150 billion tokens
+- **Data Efficiency**: Less than 2% data compared to baseline models
+- **Recursive Linear Attention**: Optimizes energy efficiency and speed
+- **MetaX Clusters**: Stable large-scale training on non-NVIDIA hardware
+
+### 2. Training Methodology
+
+#### Conversion Process
+1. **Initial Conversion**: Transform existing Transformer weights to spiking format
+2. **Spike Encoding**: Convert continuous activations to discrete spike patterns
+3. **Gradient Approximation**: Use surrogate gradients for spiking neurons
+4. **Fine-tuning**: Adapt model to spiking dynamics
+
+#### Training Optimization
+- **Memory Efficiency**: Constant memory usage through recurrent attention
+- **Energy Savings**: Event-driven processing reduces computational overhead
+- **Scalability**: Efficient training on large-scale clusters
+- **Stability**: Careful gradient management for spiking neurons
+
+### 3. Performance Metrics
+
+```mermaid
+graph LR
+    A[Training Efficiency] --> B[Data: <2% of baseline]
+    A --> C[Speed: 100x faster]
+    A --> D[Energy: 69% reduction]
+    
+    E[Model Performance] --> F[7B: Linear + SWA]
+    E --> G[76B: Hybrid MoE]
+    E --> H[Context: 4M+ tokens]
 ```
-FLOPs_effective ≈ a × (k/M) × FLOPs_dense
+
+### 4. Hardware Optimization
+
+#### MetaX Cluster Support
+- **Non-NVIDIA Hardware**: Optimized for diverse GPU architectures
+- **CUDA/Triton Kernels**: Efficient sparse operations
+- **Communication**: Reduced All-to-All communication by $\frac{k}{M}$
+- **Memory**: Bandwidth reduction by sparsity ratio
+
+#### Neuromorphic Hardware Direction
+- **Specialized Chips**: Design for spiking neural networks
+- **In-memory Computing**: Support for analog computation
+- **Energy Efficiency**: Ultra-low power consumption
+- **Real-time Processing**: Event-driven architecture
+
+## SpikingBrain Training Visualization
+
+### Training Data Flow
+
+```mermaid
+sequenceDiagram
+    participant T as Transformer Model
+    participant S as Spike Conversion
+    participant P as Pre-training
+    participant O as Optimization
+    participant F as Final Model
+    
+    T->>S: Pre-trained Weights
+    S->>S: Convert to Spike Format
+    S->>P: Initialize Spiking Model
+    P->>P: Train on 150B+ Tokens
+    P->>O: Apply Linear Attention
+    O->>O: Energy Optimization
+    O->>F: Deploy SpikingBrain
 ```
 
-**Ví dụ thực tế:**
-- M = 64 experts, k = 2, a = 0.31
-- → Giảm 103x chi phí FFN so với dense model
+### Model Comparison
 
-### Attention Mechanism Hiệu quả
-
-**Công thức rút gọn attention:**
+```mermaid
+graph TB
+    subgraph "Traditional Transformer"
+        A1[All Neurons Active]
+        A2[Continuous Processing]
+        A3[High Energy Consumption]
+        A4["O(n²) Attention Complexity"]
+    end
+    
+    subgraph "SpikingBrain-7B"
+        B1[31% Neurons Active]
+        B2[Event-driven Processing]
+        B3["Linear Attention O(n)"]
+        B4[Sliding Window Attention]
+    end
+    
+    subgraph "SpikingBrain-76B"
+        C1[Selective Expert Activation]
+        C2[Parallel Attention Branches]
+        C3[MoE with Sparse Activation]
+        C4[Hybrid Architecture]
+    end
+    
+    A1 --> B1
+    A2 --> B2
+    A3 --> B3
+    A4 --> B4
 ```
-FLOPs_attention ≈ O(n × m × d_k) thay vì O(n² × d_k)
+
+## Advanced Training Techniques
+
+### 1. Surrogate Gradient Learning
+
+SpikingBrain employs sophisticated gradient approximation techniques:
+
+```mermaid
+graph LR
+    A[Spike Function] --> B[Non-differentiable]
+    B --> C[Surrogate Gradient]
+    C --> D[Backpropagation]
+    D --> E[Weight Updates]
+    
+    subgraph "Surrogate Functions"
+        F[Straight-through Estimator]
+        G[Sigmoid Approximation]
+        H[Triangular Function]
+    end
 ```
 
-**Tỷ lệ rút gọn:**
+**Key Benefits:**
+- Enables gradient-based learning for spiking neurons
+- Maintains training stability
+- Preserves spiking dynamics
+
+### 2. Energy-Aware Training
+
+```mermaid
+flowchart TD
+    A[Input Data] --> B[Spike Encoding]
+    B --> C[Forward Pass]
+    C --> D[Energy Calculation]
+    D --> E[Loss Function]
+    E --> F[Backward Pass]
+    F --> G[Weight Update]
+    G --> H[Energy Optimization]
+    H --> I[Next Iteration]
+    
+    subgraph "Energy Metrics"
+        J[Spike Count]
+        K[Activation Frequency]
+        L[Power Consumption]
+    end
 ```
-r_attention = m/n
+
+### 3. Multi-Scale Training
+
+SpikingBrain uses a hierarchical training approach:
+
+```mermaid
+graph TD
+    A[Token Level] --> B[Spike Patterns]
+    B --> C[Local Dependencies]
+    C --> D[Global Context]
+    D --> E[Long-range Dependencies]
+    
+    subgraph "Training Scales"
+        F[Character/Subword]
+        G[Word Level]
+        H[Sentence Level]
+        I[Document Level]
+    end
 ```
 
-**Ví dụ với context dài:**
-- n = 4M tokens, m = 32K tokens
-- → Giảm 125x chi phí attention
+## Performance Analysis
 
-## Quy trình phát triển
+### Computational Complexity Comparison
 
-### 1. Conversion-based Training
-- Chuyển đổi từ mô hình Transformer có sẵn
-- Huấn luyện tiếp với ít dữ liệu hơn (<2% so với baseline)
-- Hiệu quả dữ liệu: η_data ≥ 50x
-
-### 2. Train from Scratch
-- Huấn luyện mới với hiệu quả cao
-- Tối ưu cho context dài (4M+ tokens)
-- Speedup tổng thể: ~120x
-
-### 3. Hướng tới Neuromorphic Hardware
-- Thiết kế chip chuyên dụng cho spiking neural networks
-- Tối ưu năng lượng và tốc độ
-- Hỗ trợ in-memory computing
-
-## Hỗ trợ phần cứng
-
-### Non-NVIDIA Clusters
-- Tối ưu cho MetaX và các cluster khác
-- CUDA/Triton kernels cho sparse operations
-- Expert parallelism cho MoE
-
-### Communication Optimization
-- All-to-All communication giảm theo k/M
-- Spike messaging chỉ gửi active neurons
-- Bandwidth giảm theo tỷ lệ sparsity
-
-## Công thức tổng quát
-
-**Tỷ lệ chi phí toàn mô hình:**
+```mermaid
+graph LR
+    subgraph "Traditional Models"
+        A1["Attention: O(n²)"]
+        A2["FFN: O(d²)"]
+        A3["Memory: O(n²)"]
+    end
+    
+    subgraph "SpikingBrain-7B"
+        B1["Linear Attention: O(n)"]
+        B2["SWA: O(n×w)"]
+        B3["Memory: O(n)"]
+    end
+    
+    subgraph "SpikingBrain-76B"
+        C1["Parallel Attention: O(n×m)"]
+        C2["MoE: O(k×d)"]
+        C3["Memory: O(n×m)"]
+    end
+    
+    A1 --> B1
+    A2 --> B2
+    A3 --> B3
+    B1 --> C1
+    B2 --> C2
+    B3 --> C3
 ```
-R = α × (m/n) + (1-α) × a × (k/M)
-```
+
+### Energy Efficiency Metrics
+
+| Model | Active Neurons | Energy Reduction | Speedup |
+|-------|---------------|------------------|---------|
+| Traditional | 100% | 0% | 1x |
+| SpikingBrain-7B | 31% | 69% | 100x |
+| SpikingBrain-76B | 15% | 85% | 120x |
+
+## General Formula
+
+**Overall model cost ratio:**
+$$R = \alpha \times \frac{m}{n} + (1-\alpha) \times a \times \frac{k}{M}$$
 
 **Speedup:**
-```
-Speedup = 1/R
-```
+$$\text{Speedup} = \frac{1}{R}$$
 
-**Ví dụ tính toán:**
-- α = 0.8, m/n = 0.008, a = 0.31, k/M = 0.031
-- → R ≈ 0.00834
+**Calculation example:**
+- $\alpha = 0.8$, $\frac{m}{n} = 0.008$, $a = 0.31$, $\frac{k}{M} = 0.031$
+- → $R \approx 0.00834$
 - → **Speedup ≈ 120x**
 
-## Thách thức và hạn chế
+## Challenges and Limitations
 
 ### 1. Routing Skew
-- Một số experts được sử dụng quá nhiều
-- Giảm hiệu quả của MoE
-- Tăng chi phí communication
+- Some experts are overused
+- Reduce MoE efficiency
+- Increase communication costs
 
-### 2. Sparsity trên GPU
-- Cần kernel tối ưu cho sparse operations
-- Không phải GPU nào cũng hỗ trợ tốt
-- Có thể giảm lợi ích thực tế
+### 2. Sparsity on GPU
+- Need optimized kernels for sparse operations
+- Not all GPUs support well
+- May reduce actual benefits
 
-### 3. Ổn định huấn luyện
-- Cần surrogate gradients cho spiking neurons
-- Có thể trade-off chất lượng để đạt hiệu quả
-- Cần kỹ thuật chuyển đổi cẩn thận
+### 3. Training Stability
+- Need surrogate gradients for spiking neurons
+- May trade-off quality for efficiency
+- Need careful conversion techniques
 
 ### 4. Memory Requirements
-- Long-context vẫn cần cache keys/values
-- Chọn m quá nhỏ có thể giảm chất lượng
-- Cần cân bằng giữa hiệu quả và performance
+- Long-context still needs cache keys/values
+- Choosing m too small may reduce quality
+- Need balance between efficiency and performance
 
-## Kết luận
+## Conclusion
 
-SpikingBrain đại diện cho một bước tiến quan trọng trong việc phát triển các mô hình AI hiệu quả và tiết kiệm năng lượng. Bằng cách lấy cảm hứng từ cơ chế hoạt động của não bộ, kiến trúc này đã đạt được:
+SpikingBrain represents an important advancement in developing efficient and energy-saving AI models. By drawing inspiration from brain mechanisms, this architecture has achieved:
 
-- **Hiệu suất vượt trội**: Tăng tốc hơn 100x
-- **Tiết kiệm tài nguyên**: Giảm 69% tính toán
-- **Linh hoạt phần cứng**: Chạy trên nhiều loại cluster
-- **Hiệu quả huấn luyện**: Chỉ cần <2% dữ liệu
+- **Outstanding performance**: 100x speedup
+- **Resource savings**: 69% computation reduction
+- **Hardware flexibility**: Runs on various cluster types
+- **Training efficiency**: Requires only <2% data
 
-Mặc dù vẫn còn một số thách thức kỹ thuật, SpikingBrain mở ra hướng đi mới cho việc phát triển các mô hình AI thế hệ tiếp theo - vừa mạnh mẽ, vừa tiết kiệm, và gần gũi hơn với cách hoạt động tự nhiên của não bộ con người.
+Although there are still some technical challenges, SpikingBrain opens new directions for developing next-generation AI models - both powerful, efficient, and closer to the natural operation of the human brain.
 
 ---
 
-*Bạn có muốn tôi tạo một công cụ tính toán Python để ước tính hiệu suất SpikingBrain với các tham số khác nhau không?*
+*Would you like me to create a Python calculation tool to estimate SpikingBrain performance with different parameters?*
