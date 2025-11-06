@@ -39,10 +39,10 @@ export async function POST(request: NextRequest) {
       title,
       date: formatDate(),
       categories: categories && categories.length > 0 
-        ? Array.isArray(categories) ? categories : categories.split(',').map(c => c.trim())
+        ? Array.isArray(categories) ? categories : categories.split(',').map((c: string) => c.trim())
         : undefined,
       tags: tags && tags.length > 0
-        ? Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim())
+        ? Array.isArray(tags) ? tags : tags.split(',').map((t: string) => t.trim())
         : undefined,
       math: math || false,
     });
