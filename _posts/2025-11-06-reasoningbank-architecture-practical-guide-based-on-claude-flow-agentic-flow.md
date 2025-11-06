@@ -26,22 +26,22 @@ Awesome brief. I dug through both repos and the specific adapter file you pointe
 ```mermaid
 flowchart LR
   subgraph Agent Runtime
-    A1[LLM Agent(s)] --> A2[Skill Layer / MCP Tools]
-    A2 -->|store/query| A3[Memory Facade]
+    A1["LLM Agent(s)"] --> A2["Skill Layer / MCP Tools"]
+    A2 -->|"store/query"| A3["Memory Facade"]
   end
 
-  subgraph Memory Facade (Claude-Flow)
-    A3 -->|vector ops| M1[AgentDB\n(HNSW, quantization)]
-    A3 -->|pattern ops| M2[ReasoningBank Adapter]
+  subgraph "Memory Facade (Claude-Flow)"
+    A3 -->|"vector ops"| M1["AgentDB<br/>(HNSW, quantization)"]
+    A3 -->|"pattern ops"| M2["ReasoningBank Adapter"]
   end
 
-  subgraph ReasoningBank (Agentic-Flow)
-    M2 <-->|API| RBAPI[reasoningbank module]
-    RBAPI --> DB[(SQLite: .swarm/memory.db)]
-    RBAPI --> IDX[Embedder + MMR ranker]
+  subgraph "ReasoningBank (Agentic-Flow)"
+    M2 <-->|API| RBAPI["reasoningbank module"]
+    RBAPI --> DB[("SQLite: .swarm/memory.db")]
+    RBAPI --> IDX["Embedder + MMR ranker"]
   end
 
-  subgraph Data Model
+  subgraph "Data Model"
     DB --> T1[patterns]
     DB --> T2[embeddings]
     DB --> T3[trajectories]
@@ -49,8 +49,8 @@ flowchart LR
   end
 
   subgraph IO
-    IN[(Events: tasks, runs, outcomes)]
-    OUT[(Top-k patterns: steps, diffs, configs)]
+    IN[("Events: tasks, runs, outcomes")]
+    OUT[("Top-k patterns: steps, diffs, configs")]
   end
 
   IN --> A2
