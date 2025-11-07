@@ -2,7 +2,7 @@ import PostEditor from '@/components/PostEditor';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gray-50 py-8">
+    <main className="w-full min-h-screen">
       <PostEditor />
     </main>
   );

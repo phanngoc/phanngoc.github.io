@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { slugify } from '@/lib/client-utils';
 
 interface PostEditorProps {
@@ -159,147 +161,172 @@ export default function PostEditor({ onSave, onPublish }: PostEditorProps) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold mb-6">Jekyll Post Editor</h1>
+    <div className="w-full min-h-screen bg-gray-50">
+      <div className="w-full p-6 space-y-6">
+        <h1 className="text-3xl font-bold mb-6">Jekyll Post Editor</h1>
 
-      {message && (
-        <div
-          className={`p-4 rounded ${
-            message.type === 'success'
-              ? 'bg-green-100 text-green-800 border border-green-300'
-              : 'bg-red-100 text-red-800 border border-red-300'
-          }`}
-        >
-          {message.text}
-        </div>
-      )}
+        {message && (
+          <div
+            className={`p-4 rounded ${
+              message.type === 'success'
+                ? 'bg-green-100 text-green-800 border border-green-300'
+                : 'bg-red-100 text-red-800 border border-red-300'
+            }`}
+          >
+            {message.text}
+          </div>
+        )}
 
-      <div className="space-y-4">
-        {/* Title */}
-        <div>
-          <label htmlFor="title" className="block text-sm font-medium mb-2">
-            Title <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="title"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Nhập tiêu đề bài viết"
-          />
-        </div>
-
-        {/* Slug */}
-        <div>
-          <label htmlFor="slug" className="block text-sm font-medium mb-2">
-            Slug <span className="text-red-500">*</span>
-          </label>
-          <div className="flex gap-2">
+        <div className="space-y-4">
+          {/* Title */}
+          <div>
+            <label htmlFor="title" className="block text-sm font-medium mb-2">
+              Title <span className="text-red-500">*</span>
+            </label>
             <input
-              id="slug"
+              id="title"
               type="text"
-              value={slug}
-              onChange={(e) => {
-                setSlug(e.target.value);
-                setAutoSlug(false);
-              }}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="url-friendly-slug"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Nhập tiêu đề bài viết"
             />
+          </div>
+
+          {/* Slug */}
+          <div>
+            <label htmlFor="slug" className="block text-sm font-medium mb-2">
+              Slug <span className="text-red-500">*</span>
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="slug"
+                type="text"
+                value={slug}
+                onChange={(e) => {
+                  setSlug(e.target.value);
+                  setAutoSlug(false);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="url-friendly-slug"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setAutoSlug(true);
+                  if (title) {
+                    setSlug(slugify(title));
+                  }
+                }}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md text-sm"
+              >
+                Auto
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Slug sẽ được dùng để tạo tên file (YYYY-MM-DD-slug.md)
+            </p>
+          </div>
+
+          {/* Content Split View */}
+          <div>
+            <label htmlFor="content" className="block text-sm font-medium mb-2">
+              Content (Markdown) <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[400px] lg:h-[600px]">
+              {/* Editor Panel */}
+              <div className="flex flex-col border border-gray-300 rounded-md overflow-hidden bg-white shadow-sm">
+                <div className="px-3 py-2 bg-gray-100 border-b border-gray-300 text-xs font-medium text-gray-700">
+                  Editor
+                </div>
+                <textarea
+                  id="content"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="flex-1 w-full px-4 py-2 border-0 rounded-md focus:outline-none focus:ring-0 font-mono text-sm resize-none"
+                  placeholder="Viết nội dung bài viết bằng Markdown..."
+                />
+              </div>
+
+              {/* Preview Panel */}
+              <div className="flex flex-col border border-gray-300 rounded-md overflow-hidden bg-white shadow-sm">
+                <div className="px-3 py-2 bg-gray-100 border-b border-gray-300 text-xs font-medium text-gray-700">
+                  Preview
+                </div>
+                <div className="flex-1 overflow-y-auto px-6 py-4 prose prose-sm prose-gray max-w-none">
+                  {content ? (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {content}
+                    </ReactMarkdown>
+                  ) : (
+                    <p className="text-gray-400 italic text-sm">Preview sẽ hiển thị ở đây...</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Categories */}
+          <div>
+            <label htmlFor="categories" className="block text-sm font-medium mb-2">
+              Categories (optional)
+            </label>
+            <input
+              id="categories"
+              type="text"
+              value={categories}
+              onChange={(e) => setCategories(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="machine-learning, llm, fine-tuning (phân cách bằng dấu phẩy)"
+            />
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label htmlFor="tags" className="block text-sm font-medium mb-2">
+              Tags (optional)
+            </label>
+            <input
+              id="tags"
+              type="text"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="LoRA, QLoRA, RLHF (phân cách bằng dấu phẩy)"
+            />
+          </div>
+
+          {/* Math Support */}
+          <div className="flex items-center">
+            <input
+              id="math"
+              type="checkbox"
+              checked={math}
+              onChange={(e) => setMath(e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="math" className="ml-2 text-sm font-medium">
+              Enable Math Support (LaTeX)
+            </label>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-4 pt-4">
             <button
-              type="button"
-              onClick={() => {
-                setAutoSlug(true);
-                if (title) {
-                  setSlug(slugify(title));
-                }
-              }}
-              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md text-sm"
+              onClick={handleSave}
+              disabled={isSaving || isPublishing}
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              Auto
+              {isSaving ? 'Đang lưu...' : 'Lưu'}
+            </button>
+            <button
+              onClick={handlePublish}
+              disabled={isSaving || isPublishing}
+              className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {isPublishing ? 'Đang publish...' : 'Lưu & Publish'}
             </button>
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Slug sẽ được dùng để tạo tên file (YYYY-MM-DD-slug.md)
-          </p>
-        </div>
-
-        {/* Content */}
-        <div>
-          <label htmlFor="content" className="block text-sm font-medium mb-2">
-            Content (Markdown) <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            id="content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={20}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-            placeholder="Viết nội dung bài viết bằng Markdown..."
-          />
-        </div>
-
-        {/* Categories */}
-        <div>
-          <label htmlFor="categories" className="block text-sm font-medium mb-2">
-            Categories (optional)
-          </label>
-          <input
-            id="categories"
-            type="text"
-            value={categories}
-            onChange={(e) => setCategories(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="machine-learning, llm, fine-tuning (phân cách bằng dấu phẩy)"
-          />
-        </div>
-
-        {/* Tags */}
-        <div>
-          <label htmlFor="tags" className="block text-sm font-medium mb-2">
-            Tags (optional)
-          </label>
-          <input
-            id="tags"
-            type="text"
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="LoRA, QLoRA, RLHF (phân cách bằng dấu phẩy)"
-          />
-        </div>
-
-        {/* Math Support */}
-        <div className="flex items-center">
-          <input
-            id="math"
-            type="checkbox"
-            checked={math}
-            onChange={(e) => setMath(e.target.checked)}
-            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-          />
-          <label htmlFor="math" className="ml-2 text-sm font-medium">
-            Enable Math Support (LaTeX)
-          </label>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-4 pt-4">
-          <button
-            onClick={handleSave}
-            disabled={isSaving || isPublishing}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {isSaving ? 'Đang lưu...' : 'Lưu'}
-          </button>
-          <button
-            onClick={handlePublish}
-            disabled={isSaving || isPublishing}
-            className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {isPublishing ? 'Đang publish...' : 'Lưu & Publish'}
-          </button>
         </div>
       </div>
     </div>
