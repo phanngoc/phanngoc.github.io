@@ -547,6 +547,7 @@ function MarkdownImage(props: any) {
 }
 
 interface PostEditorProps {
+  initialData?: PostData & { filename?: string };
   onSave?: (data: PostData) => void;
   onPublish?: (data: PostData) => void;
 }
@@ -560,7 +561,7 @@ export interface PostData {
   math: boolean;
 }
 
-export default function PostEditor({ onSave, onPublish }: PostEditorProps) {
+export default function PostEditor({ initialData, onSave, onPublish }: PostEditorProps) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [slug, setSlug] = useState('');
@@ -573,14 +574,31 @@ export default function PostEditor({ onSave, onPublish }: PostEditorProps) {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [currentFilename, setCurrentFilename] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-generate slug from title
+  // Load initial data if provided
   useEffect(() => {
-    if (autoSlug && title) {
+    if (initialData) {
+      setTitle(initialData.title || '');
+      setContent(initialData.content || '');
+      setSlug(initialData.slug || '');
+      setCategories(initialData.categories || '');
+      setTags(initialData.tags || '');
+      setMath(initialData.math || false);
+      setAutoSlug(false); // Disable auto-slug when editing
+      if (initialData.filename) {
+        setCurrentFilename(initialData.filename);
+      }
+    }
+  }, [initialData]);
+
+  // Auto-generate slug from title (only when not editing)
+  useEffect(() => {
+    if (autoSlug && title && !initialData) {
       setSlug(slugify(title));
     }
-  }, [title, autoSlug]);
+  }, [title, autoSlug, initialData]);
 
   // Helper function to insert text at cursor position
   const insertTextAtCursor = (text: string) => {
@@ -713,6 +731,7 @@ export default function PostEditor({ onSave, onPublish }: PostEditorProps) {
           categories: categories.trim(),
           tags: tags.trim(),
           math,
+          filename: currentFilename, // Include filename if editing
         }),
       });
 
@@ -720,6 +739,11 @@ export default function PostEditor({ onSave, onPublish }: PostEditorProps) {
 
       if (!response.ok) {
         throw new Error(data.error || 'Lỗi khi lưu post');
+      }
+
+      // Update current filename if it was a new post
+      if (data.filename && !currentFilename) {
+        setCurrentFilename(data.filename);
       }
 
       setMessage({ type: 'success', text: data.message || 'Post đã được lưu thành công' });
@@ -764,6 +788,7 @@ export default function PostEditor({ onSave, onPublish }: PostEditorProps) {
           categories: categories.trim(),
           tags: tags.trim(),
           math,
+          filename: currentFilename, // Include filename if editing
         }),
       });
 
@@ -771,6 +796,11 @@ export default function PostEditor({ onSave, onPublish }: PostEditorProps) {
 
       if (!saveResponse.ok) {
         throw new Error(saveData.error || 'Lỗi khi lưu post');
+      }
+
+      // Update current filename if it was a new post
+      if (saveData.filename && !currentFilename) {
+        setCurrentFilename(saveData.filename);
       }
 
       // Then publish

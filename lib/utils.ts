@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import yaml from 'js-yaml';
 
 /**
  * Format date for Jekyll front matter
@@ -107,5 +108,124 @@ export function generateFilename(slug: string, date?: Date): string {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}-${slug}.md`;
+}
+
+/**
+ * Extract slug from filename (format: YYYY-MM-DD-slug.md)
+ */
+export function extractSlugFromFilename(filename: string): string {
+  // Remove extension
+  const nameWithoutExt = filename.replace(/\.(md|markdown)$/i, '');
+  // Remove date prefix (YYYY-MM-DD-)
+  const slug = nameWithoutExt.replace(/^\d{4}-\d{2}-\d{2}-/, '');
+  return slug;
+}
+
+/**
+ * Parse front matter from markdown file content
+ */
+export function parseFrontMatter(content: string): {
+  frontMatter: Record<string, any>;
+  body: string;
+} {
+  const frontMatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/;
+  const match = content.match(frontMatterRegex);
+
+  if (!match) {
+    return {
+      frontMatter: {},
+      body: content,
+    };
+  }
+
+  try {
+    const frontMatter = yaml.load(match[1]) as Record<string, any>;
+    const body = match[2] || '';
+
+    return {
+      frontMatter: frontMatter || {},
+      body: body.trim(),
+    };
+  } catch (error) {
+    console.error('Error parsing front matter:', error);
+    return {
+      frontMatter: {},
+      body: content,
+    };
+  }
+}
+
+/**
+ * Parse post file and return structured data
+ */
+export function parsePostFile(filePath: string): {
+  filename: string;
+  slug: string;
+  title: string;
+  date: string;
+  categories?: string[];
+  tags?: string[];
+  math?: boolean;
+  content: string;
+  frontMatter: Record<string, any>;
+} | null {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const filename = path.basename(filePath);
+    const slug = extractSlugFromFilename(filename);
+    const { frontMatter, body } = parseFrontMatter(content);
+
+    // Normalize front matter values
+    const title = frontMatter.title || '';
+    
+    // Extract date from front matter, or fallback to filename date (YYYY-MM-DD-slug.md)
+    let date = frontMatter.date || '';
+    if (!date) {
+      // Try to extract date from filename (format: YYYY-MM-DD-slug.md)
+      const dateMatch = filename.match(/^(\d{4}-\d{2}-\d{2})-/);
+      if (dateMatch) {
+        date = `${dateMatch[1]} 00:00:00 +0700`;
+      } else {
+        // Fallback to current date if no date found
+        date = formatDate();
+      }
+    }
+    
+    // Handle categories and tags - can be array or string
+    let categories: string[] | undefined;
+    if (frontMatter.categories) {
+      if (Array.isArray(frontMatter.categories)) {
+        categories = frontMatter.categories;
+      } else if (typeof frontMatter.categories === 'string') {
+        categories = frontMatter.categories.split(',').map(c => c.trim()).filter(c => c);
+      }
+    }
+
+    let tags: string[] | undefined;
+    if (frontMatter.tags) {
+      if (Array.isArray(frontMatter.tags)) {
+        tags = frontMatter.tags;
+      } else if (typeof frontMatter.tags === 'string') {
+        tags = frontMatter.tags.split(',').map(t => t.trim()).filter(t => t);
+      }
+    }
+
+    const math = frontMatter.math || false;
+
+    return {
+      filename,
+      slug,
+      title,
+      date,
+      categories,
+      tags,
+      math,
+      content: body,
+      frontMatter,
+    };
+  } catch (error) {
+    console.error('Error parsing post file:', error);
+    return null;
+  }
 }
 

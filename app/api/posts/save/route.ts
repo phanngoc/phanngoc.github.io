@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { generateFrontMatter, formatDate, validateSlug, generateFilename } from '@/lib/utils';
+import { generateFrontMatter, formatDate, validateSlug, generateFilename, parsePostFile } from '@/lib/utils';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, content, slug, categories, tags, math } = body;
+    const { title, content, slug, categories, tags, math, filename: existingFilename } = body;
 
     // Validate required fields
     if (!title || !content || !slug) {
@@ -16,17 +16,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate slug
-    const slugValidation = validateSlug(slug);
-    if (!slugValidation.valid) {
-      return NextResponse.json(
-        { error: slugValidation.message },
-        { status: 400 }
-      );
-    }
-
-    // Generate filename
-    const filename = slugValidation.filename || generateFilename(slug);
     const postsDir = path.join(process.cwd(), '_posts');
     
     // Ensure _posts directory exists
@@ -34,10 +23,42 @@ export async function POST(request: NextRequest) {
       fs.mkdirSync(postsDir, { recursive: true });
     }
 
+    let filename: string;
+    let postDate: string;
+
+    if (existingFilename) {
+      // Editing existing post - use existing filename and date
+      filename = existingFilename;
+      const existingFilePath = path.join(postsDir, existingFilename);
+      
+      if (!fs.existsSync(existingFilePath)) {
+        return NextResponse.json(
+          { error: `File ${existingFilename} không tồn tại` },
+          { status: 404 }
+        );
+      }
+
+      // Parse existing file to get original date
+      const existingPost = parsePostFile(existingFilePath);
+      postDate = existingPost?.date || formatDate();
+    } else {
+      // Creating new post - validate slug and generate filename
+      const slugValidation = validateSlug(slug);
+      if (!slugValidation.valid) {
+        return NextResponse.json(
+          { error: slugValidation.message },
+          { status: 400 }
+        );
+      }
+
+      filename = slugValidation.filename || generateFilename(slug);
+      postDate = formatDate();
+    }
+
     // Generate front matter
     const frontMatter = generateFrontMatter({
       title,
-      date: formatDate(),
+      date: postDate,
       categories: categories && categories.length > 0 
         ? Array.isArray(categories) ? categories : categories.split(',').map((c: string) => c.trim())
         : undefined,
@@ -56,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Post đã được lưu thành công',
+      message: existingFilename ? 'Post đã được cập nhật thành công' : 'Post đã được lưu thành công',
       filename,
       path: filePath,
     });

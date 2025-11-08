@@ -1,9 +1,9 @@
-import PostEditor from '@/components/PostEditor';
+import PostList from '@/components/PostList';
 
 export default function Home() {
   return (
     <main className="w-full min-h-screen">
-      <PostEditor />
+      <PostList />
     </main>
   );
 }
