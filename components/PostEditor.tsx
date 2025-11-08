@@ -575,6 +575,7 @@ export default function PostEditor({ initialData, onSave, onPublish }: PostEdito
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [currentFilename, setCurrentFilename] = useState<string | null>(null);
+  const [isGeneratingGif, setIsGeneratingGif] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Load initial data if provided
@@ -706,6 +707,59 @@ export default function PostEditor({ initialData, onSave, onPublish }: PostEdito
       if (file) {
         await uploadAndInsertImage(file);
       }
+    }
+  };
+
+  // Generate Flow GIF
+  const handleGenerateGif = async () => {
+    if (!content.trim()) {
+      setMessage({ type: 'error', text: 'Vui lòng nhập nội dung bài viết trước khi generate GIF' });
+      return;
+    }
+
+    if (!slug.trim()) {
+      setMessage({ type: 'error', text: 'Vui lòng nhập slug trước khi generate GIF' });
+      return;
+    }
+
+    setIsGeneratingGif(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch('/api/diagrams/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: content.trim(),
+          slug: slug.trim(),
+          title: title.trim() || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Lỗi khi generate GIF diagram');
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Generate GIF thất bại');
+      }
+
+      // Insert markdown image link at cursor position
+      const imageMarkdown = `\n\n![Flow Diagram](${data.gifPath})\n\n`;
+      insertTextAtCursor(imageMarkdown);
+
+      setMessage({ 
+        type: 'success', 
+        text: 'GIF diagram đã được generate và chèn vào editor thành công' 
+      });
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Lỗi khi generate GIF diagram' });
+    } finally {
+      setIsGeneratingGif(false);
     }
   };
 
@@ -1035,17 +1089,25 @@ export default function PostEditor({ initialData, onSave, onPublish }: PostEdito
           </div>
 
           {/* Actions */}
-          <div className="flex gap-4 pt-4">
+          <div className="flex gap-4 pt-4 flex-wrap">
+            <button
+              onClick={handleGenerateGif}
+              disabled={isGeneratingGif || isSaving || isPublishing || !content.trim() || !slug.trim()}
+              className="px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              title="Generate Flow GIF từ nội dung bài viết sử dụng OpenAI"
+            >
+              {isGeneratingGif ? 'Đang generate...' : 'Generate Flow GIF'}
+            </button>
             <button
               onClick={handleSave}
-              disabled={isSaving || isPublishing}
+              disabled={isSaving || isPublishing || isGeneratingGif}
               className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {isSaving ? 'Đang lưu...' : 'Lưu'}
             </button>
             <button
               onClick={handlePublish}
-              disabled={isSaving || isPublishing}
+              disabled={isSaving || isPublishing || isGeneratingGif}
               className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {isPublishing ? 'Đang publish...' : 'Lưu & Publish'}
