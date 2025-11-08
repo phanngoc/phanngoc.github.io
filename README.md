@@ -1,4 +1,4 @@
-# Site blog về technology and programming for me.
+# Editor for write blog technology and programming
 
 ## Option 1: Use editor for write blog. (Recommended)
 
