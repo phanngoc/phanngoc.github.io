@@ -1,4 +1,13 @@
-# Prompting the Market? A Large-Scale Meta-Analysis of GenAI in Finance NLP (2022–2025)
+---
+layout: "post"
+title: "Prompting the Market? A Large-Scale Meta-Analysis of GenAI in Finance NLP"
+date: "2025-09-15 00:00:00 +0700"
+math: false
+---
+
+![Flow Diagram](/assets/images/prompting-the-market-a-large-scale-meta-analysis-of-genai-in-finance-nlp/flow.gif)
+
+(2022–2025)
 (arXiv:2509.09544).
 
 ## Tóm tắt nhanh
