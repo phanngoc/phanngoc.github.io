@@ -1,6 +1,19 @@
 # Site blog về technology and programming for me.
 
-## How to Deploy a Jekyll Blog on GitHub Pages
+## Option 1: Use editor for write blog. (Recommended)
+
+
+![Alt text](./screenshot.png)
+
+```
+yarn dev
+```
+
+It will show list post, click on post to edit, have button "New post" to create new post, have button "Publish" to publish post to GitHub.
+
+
+
+## Option 2: How to Deploy a Jekyll Blog on GitHub Pages (default)
 
 ### Step 1: Install Jekyll and Bundler
 First, ensure you have Ruby and Bundler installed. Then, install Jekyll and Bundler gems:
