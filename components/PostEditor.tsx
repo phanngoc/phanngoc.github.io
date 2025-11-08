@@ -3,7 +3,472 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import mermaid from 'mermaid';
 import { slugify } from '@/lib/client-utils';
+
+// Helper function to clean and normalize mermaid code content
+function cleanMermaidCode(content: string): string {
+  if (!content) return '';
+  
+  // Split by newlines and process each line
+  const lines = content.split(/\r?\n/);
+  
+  // Remove empty lines at the start and end
+  let startIdx = 0;
+  let endIdx = lines.length - 1;
+  
+  while (startIdx < lines.length && lines[startIdx].trim() === '') {
+    startIdx++;
+  }
+  while (endIdx >= startIdx && lines[endIdx].trim() === '') {
+    endIdx--;
+  }
+  
+  // Process lines: trim each line but preserve relative indentation
+  const processedLines = lines.slice(startIdx, endIdx + 1).map(line => {
+    // Trim trailing whitespace but preserve leading spaces for indentation
+    return line.replace(/\s+$/, '');
+  });
+  
+  // Join lines with single newline
+  let cleaned = processedLines.join('\n');
+  
+  // Remove excessive blank lines (more than 2 consecutive newlines)
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+  
+  // Trim final result
+  cleaned = cleaned.trim();
+  
+  return cleaned;
+}
+
+// Helper function to fix Mermaid grammar errors, especially colons in labels
+function fixMermaidGrammar(content: string): string {
+  if (!content) return '';
+  
+  // Check if this is a state diagram
+  const isStateDiagram = /stateDiagram/i.test(content);
+  
+  if (!isStateDiagram) {
+    // For non-state diagrams, return as-is
+    return content;
+  }
+  
+  // Split into lines to process each line individually
+  const lines = content.split(/\r?\n/);
+  const fixedLines = lines.map(line => {
+    // Skip empty lines and comments
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('%%')) {
+      return line;
+    }
+    
+    // Pattern 1: Fix transition labels with colons: --> State: Label: More text
+    // Match: --> State: Label with colon
+    // This pattern matches transitions like: State1 --> State2: Action: Description
+    // Match pattern: arrow, state, colon, then label that may contain colons
+    const transitionPattern = /(-->|--|->)\s*([\w\[\]()*]+)\s*:\s*(.+)$/;
+    
+    let fixedLine = line;
+    const transitionMatch = line.match(transitionPattern);
+    
+    if (transitionMatch) {
+      const [, arrow, state, label] = transitionMatch;
+      let processedLabel = label.trim();
+      
+      // Check if label contains a colon (indicating it needs replacement)
+      if (processedLabel.includes(':')) {
+        // If label is already quoted, unquote it first
+        if ((processedLabel.startsWith('"') && processedLabel.endsWith('"')) ||
+            (processedLabel.startsWith("'") && processedLabel.endsWith("'"))) {
+          // Remove quotes
+          processedLabel = processedLabel.slice(1, -1);
+        }
+        
+        // Replace colons with dashes to avoid parse errors
+        // Replace ": " (colon followed by space) with " - " (dash with spaces)
+        // Replace ":" (colon without space) with " - " for better readability
+        processedLabel = processedLabel.replace(/:\s+/g, ' - ').replace(/:/g, ' - ');
+        
+        // Find the position of the arrow in the original line
+        const arrowIndex = line.indexOf(arrow);
+        // Preserve everything before the arrow (indentation, state name, etc.)
+        const beforeArrow = line.substring(0, arrowIndex);
+        fixedLine = `${beforeArrow}${arrow} ${state}: ${processedLabel}`;
+      }
+    }
+    
+    // Pattern 2: Fix state descriptions with multiple colons: State: Description: More
+    // This is for state definitions, not transitions
+    // Match: State: Description: More text
+    // But only if it's not a transition (doesn't start with -->)
+    if (fixedLine === line && !trimmed.includes('-->') && !trimmed.includes('--') && !trimmed.includes('->')) {
+      const stateDescPattern = /^(\s*)([\w\[\]()*]+)\s*:\s*(.+)$/;
+      const stateMatch = trimmed.match(stateDescPattern);
+      
+      if (stateMatch) {
+        const [, indent, stateName, desc] = stateMatch;
+        let processedDesc = desc.trim();
+        
+        // Check if description contains colon
+        if (processedDesc.includes(':')) {
+          // If description is already quoted, unquote it first
+          if ((processedDesc.startsWith('"') && processedDesc.endsWith('"')) ||
+              (processedDesc.startsWith("'") && processedDesc.endsWith("'"))) {
+            // Remove quotes
+            processedDesc = processedDesc.slice(1, -1);
+          }
+          
+          // Replace colons with dashes to avoid parse errors
+          // Replace ": " (colon followed by space) with " - " (dash with spaces)
+          // Replace ":" (colon without space) with " - " for better readability
+          processedDesc = processedDesc.replace(/:\s+/g, ' - ').replace(/:/g, ' - ');
+          
+          // Preserve original indentation from the line
+          const originalIndent = line.match(/^\s*/)?.[0] || '';
+          fixedLine = `${originalIndent}${stateName}: ${processedDesc}`;
+        }
+      }
+    }
+    
+    return fixedLine;
+  });
+  
+  return fixedLines.join('\n');
+}
+
+// Mermaid component for ReactMarkdown
+function MermaidCodeBlock(props: any) {
+  const mermaidRef = useRef<HTMLDivElement>(null);
+  const [mermaidError, setMermaidError] = useState(false);
+  const [isRendering, setIsRendering] = useState(true);
+  const [htmlContent, setHtmlContent] = useState('<div class="text-sm text-gray-600"><p>Đang render Mermaid diagram...</p></div>');
+  const isMountedRef = useRef(true);
+  
+  // Extract code content from children - handle multiple formats
+  const rawCodeContent = useMemo(() => {
+    // Case 1: Direct string
+    if (typeof props.children === 'string') {
+      return props.children;
+    }
+    
+    // Case 2: Array of strings
+    if (Array.isArray(props.children)) {
+      return props.children
+        .map((child: any) => {
+          if (typeof child === 'string') return child;
+          if (typeof child === 'object' && child?.props?.children) {
+            return String(child.props.children);
+          }
+          return String(child);
+        })
+        .join('');
+    }
+    
+    // Case 3: React element with children
+    if (props.children && typeof props.children === 'object') {
+      // Try props.children directly
+      if (typeof props.children.props?.children === 'string') {
+        return props.children.props.children;
+      }
+      // Try to extract from nested structure
+      if (props.children.props?.children) {
+        const children = props.children.props.children;
+        if (Array.isArray(children)) {
+          return children.map((c: any) => String(c)).join('');
+        }
+        return String(children);
+      }
+      // Fallback: try to stringify the whole thing
+      if (props.children.props) {
+        return String(props.children.props.children || props.children.props);
+      }
+    }
+    
+    return '';
+  }, [props.children]);
+
+  // Clean and normalize the code content, then fix grammar errors
+  const codeContent = useMemo(() => {
+    const cleaned = cleanMermaidCode(rawCodeContent);
+    return fixMermaidGrammar(cleaned);
+  }, [rawCodeContent]);
+
+  // Check if this is a mermaid code block
+  const isMermaid = useMemo(() => {
+    const className = props.className || '';
+    const match = /language-(\w+)/.exec(className);
+    return match && match[1] === 'mermaid';
+  }, [props.className]);
+
+  // Track mounting state
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // Initialize mermaid once - ensure it's ready (moved outside component for better performance)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    // Check if mermaid is available
+    if (!mermaid || typeof mermaid.initialize !== 'function') {
+      console.warn('Mermaid is not available');
+      return;
+    }
+    
+    // Initialize mermaid with configuration
+    try {
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: 'default',
+        securityLevel: 'loose',
+        fontFamily: 'Arial, sans-serif',
+        flowchart: {
+          useMaxWidth: true,
+          htmlLabels: true
+        },
+        sequence: {
+          useMaxWidth: true
+        },
+        gantt: {
+          useMaxWidth: true
+        }
+      });
+    } catch (error) {
+      console.error('Failed to initialize mermaid:', error);
+    }
+  }, []);
+
+  // Render mermaid diagram
+  useEffect(() => {
+    if (!isMermaid || !codeContent.trim()) {
+      setIsRendering(false);
+      return;
+    }
+
+    // Helper function to wait for ref with retry
+    const waitForRef = async (maxRetries = 10, delay = 100): Promise<HTMLDivElement | null> => {
+      for (let i = 0; i < maxRetries; i++) {
+        if (mermaidRef.current) {
+          return mermaidRef.current;
+        }
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      return null;
+    };
+
+    // Wait for mermaid to be ready and ref to be available
+    const renderMermaid = async () => {
+      console.log('[Mermaid] Starting render, isMermaid:', isMermaid, 'hasContent:', !!codeContent);
+      
+      // Wait for ref to be set with retry mechanism
+      const refElement = await waitForRef(10, 100);
+      
+      if (!refElement || !isMountedRef.current) {
+        console.warn('[Mermaid] Ref not available after retries or component unmounted');
+        if (isMountedRef.current) {
+          setIsRendering(false);
+        }
+        return;
+      }
+
+      try {
+        if (!isMountedRef.current) {
+          console.log('[Mermaid] Component unmounted, aborting render');
+          return;
+        }
+        
+        setIsRendering(true);
+        setMermaidError(false);
+        
+        // Check if mermaid is initialized
+        if (!mermaid || typeof mermaid.render !== 'function') {
+          throw new Error('Mermaid is not available');
+        }
+        
+        // Double check ref is still available
+        if (!mermaidRef.current || !isMountedRef.current) {
+          return;
+        }
+        
+        // Generate unique ID for this diagram
+        const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Render mermaid diagram using render API
+        // Code content is already cleaned by cleanMermaidCode
+        if (!codeContent || codeContent.trim().length === 0) {
+          throw new Error('Mermaid code content is empty');
+        }
+
+        console.log('[Mermaid] Calling mermaid.render with id:', id);
+        const result = await mermaid.render(id, codeContent);
+        console.log('[Mermaid] Render result:', result ? 'success' : 'null', 'hasSVG:', !!result?.svg);
+        
+        // Check if component is still mounted
+        if (!isMountedRef.current || !mermaidRef.current) {
+          console.log('[Mermaid] Component unmounted after render');
+          return;
+        }
+        
+        // Check if result is valid
+        if (!result) {
+          throw new Error('Mermaid render returned null or undefined');
+        }
+        
+        // Check if svg exists in result
+        if (!result.svg) {
+          throw new Error('Mermaid render result does not contain SVG');
+        }
+        
+        // Final check before inserting SVG
+        if (!mermaidRef.current || !isMountedRef.current) {
+          console.log('[Mermaid] Ref lost before inserting SVG');
+          return;
+        }
+        
+        // Update HTML content with SVG
+        console.log('[Mermaid] Setting SVG content');
+        if (isMountedRef.current) {
+          setHtmlContent(result.svg);
+          console.log('[Mermaid] SVG content set, length:', result.svg.length);
+          console.log('[Mermaid] Setting isRendering to false');
+          setIsRendering(false);
+        }
+      } catch (error: any) {
+        if (!isMountedRef.current) return;
+        
+        console.error('Mermaid rendering error:', error);
+        console.error('Error message:', error.message || error);
+        console.error('Code content (raw):', rawCodeContent);
+        console.error('Code content (cleaned):', codeContent);
+        
+        // Extract error message
+        const errorMessage = error.message || String(error);
+        
+        // Retry once if ref was not available
+        if (errorMessage === 'Mermaid ref is not available' || errorMessage?.includes('ref')) {
+          console.warn('Retrying mermaid render after ref error...');
+          // Wait a bit and retry
+          await new Promise(resolve => setTimeout(resolve, 200));
+          if (mermaidRef.current && isMountedRef.current) {
+            try {
+              const id = `mermaid-retry-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+              const result = await mermaid.render(id, codeContent);
+              if (result?.svg && isMountedRef.current) {
+                setHtmlContent(result.svg);
+                setIsRendering(false);
+                return;
+              }
+            } catch (retryError) {
+              console.error('Mermaid retry also failed:', retryError);
+            }
+          }
+        }
+        
+        // Escape HTML in error message and code to prevent XSS
+        const escapeHtml = (str: string) => {
+          return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+        };
+        
+        // Set error HTML content with detailed error message
+        const errorHtml = `
+          <div class="p-4 bg-red-50 border border-red-200 rounded text-sm text-black">
+            <p class="font-medium text-red-600">Lỗi khi render Mermaid diagram</p>
+            <p class="text-xs mt-2 text-gray-700">
+              Vui lòng kiểm tra syntax của Mermaid code. Có thể có lỗi parse hoặc format không đúng.
+            </p>
+            ${errorMessage ? `
+              <div class="mt-3 p-3 bg-white border border-gray-300 rounded">
+                <p class="text-xs font-semibold text-gray-800 mb-1">Chi tiết lỗi:</p>
+                <pre class="text-xs text-gray-700 whitespace-pre-wrap font-mono">${escapeHtml(errorMessage)}</pre>
+              </div>
+            ` : ''}
+            <details class="mt-3">
+              <summary class="cursor-pointer text-xs font-medium text-gray-700 hover:text-gray-900">
+                Xem code content
+              </summary>
+              <pre class="mt-2 text-xs bg-white p-2 rounded overflow-x-auto whitespace-pre-wrap border border-gray-300 font-mono">${escapeHtml(codeContent || rawCodeContent)}</pre>
+            </details>
+          </div>
+        `;
+        setHtmlContent(errorHtml);
+        setMermaidError(true);
+        setIsRendering(false);
+      }
+    };
+
+    renderMermaid();
+
+    // Cleanup function - mark as unmounted when effect cleanup runs
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [isMermaid, codeContent, rawCodeContent]);
+
+  // If not mermaid, render as normal code block
+  if (!isMermaid) {
+    return <code {...props}>{props.children}</code>;
+  }
+
+  // Always render div with ref, use dangerouslySetInnerHTML to avoid React/DOM conflicts
+  return (
+    <div 
+      ref={mermaidRef}
+      className="my-4 mermaid text-center bg-gray-50 border border-gray-200 rounded-lg p-5"
+      style={{ 
+        textAlign: 'center',
+        margin: '20px 0',
+        background: '#f8f9fa',
+        borderRadius: '8px',
+        padding: '20px',
+        border: '1px solid #e9ecef',
+        minHeight: '100px'
+      }}
+      dangerouslySetInnerHTML={{ __html: htmlContent }}
+    />
+  );
+}
+
+// Pre component wrapper for mermaid
+function MermaidPreBlock(props: any) {
+  // Check if this pre contains a mermaid code block
+  const isMermaid = useMemo(() => {
+    // ReactMarkdown wraps code in pre, so children should be a code element
+    const codeElement = props.children;
+    
+    // Check if it's a code element with mermaid class
+    if (codeElement?.props?.className) {
+      const className = codeElement.props.className || '';
+      const match = /language-(\w+)/.exec(className);
+      return match && match[1] === 'mermaid';
+    }
+    
+    // Also check className directly on props (sometimes ReactMarkdown passes it differently)
+    if (props.className) {
+      const match = /language-(\w+)/.exec(props.className);
+      return match && match[1] === 'mermaid';
+    }
+    
+    return false;
+  }, [props.children, props.className]);
+
+  // If mermaid, let MermaidCodeBlock handle it
+  if (isMermaid && props.children?.props) {
+    // Pass all props from code element to MermaidCodeBlock
+    return <MermaidCodeBlock {...props.children.props} />;
+  }
+
+  // Otherwise render as normal pre
+  return <pre {...props}>{props.children}</pre>;
+}
 
 // Image component for ReactMarkdown with error handling
 function MarkdownImage(props: any) {
@@ -464,6 +929,25 @@ export default function PostEditor({ onSave, onPublish }: PostEditorProps) {
                       remarkPlugins={[remarkGfm]}
                       components={{
                         img: MarkdownImage,
+                        code: (props: any) => {
+                          // Check if it's a mermaid code block
+                          const className = props.className || '';
+                          const match = /language-(\w+)/.exec(className);
+                          const isMermaid = match && match[1] === 'mermaid';
+                          
+                          if (isMermaid) {
+                            return <MermaidCodeBlock {...props} />;
+                          }
+                          
+                          // For inline code, render normally
+                          if (props.inline) {
+                            return <code {...props}>{props.children}</code>;
+                          }
+                          
+                          // For code blocks, let pre handle it
+                          return <code {...props}>{props.children}</code>;
+                        },
+                        pre: MermaidPreBlock,
                       }}
                     >
                       {content}
