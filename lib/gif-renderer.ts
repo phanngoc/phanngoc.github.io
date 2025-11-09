@@ -1,5 +1,4 @@
 import { createCanvas, CanvasRenderingContext2D } from 'canvas';
-import GIFEncoder from 'gif-encoder-2';
 import fs from 'fs';
 import path from 'path';
 import { DiagramSpec, DiagramNode, DiagramFlow, DiagramFrame } from './diagram-spec';
@@ -170,57 +169,12 @@ function drawFrame(
 
 /**
  * Render diagram specification to GIF file
+ * NOTE: GIF rendering is currently disabled - gif-encoder-2 has been removed
  */
 export async function renderDiagramGif(
   spec: DiagramSpec,
   outPath: string
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    try {
-      // Ensure output directory exists
-      const outDir = path.dirname(outPath);
-      if (!fs.existsSync(outDir)) {
-        fs.mkdirSync(outDir, { recursive: true });
-      }
-
-      // Create GIF encoder
-      const encoder = new GIFEncoder(WIDTH, HEIGHT);
-      const writeStream = fs.createWriteStream(outPath);
-      
-      encoder.createReadStream().pipe(writeStream);
-
-      encoder.start();
-      encoder.setRepeat(0); // 0 = loop forever
-      encoder.setDelay(FRAME_DELAY);
-      encoder.setQuality(10); // 1-30, lower is better quality but larger file
-
-      // Create canvas
-      const canvas = createCanvas(WIDTH, HEIGHT);
-      const ctx = canvas.getContext('2d');
-
-      // Render each frame
-      for (const frame of spec.frames) {
-        drawFrame(ctx, spec, frame);
-        
-        // Add frame to encoder - need to pass ImageData
-        const imageData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
-        encoder.addFrame(imageData.data);
-      }
-
-      // Finish encoding
-      encoder.finish();
-
-      // Wait for stream to finish
-      writeStream.on('finish', () => {
-        resolve();
-      });
-
-      writeStream.on('error', (error) => {
-        reject(new Error(`Failed to write GIF file: ${error.message}`));
-      });
-    } catch (error: any) {
-      reject(new Error(`Failed to render GIF: ${error.message}`));
-    }
-  });
+  throw new Error('GIF rendering is not available. gif-encoder-2 has been removed.');
 }
 
