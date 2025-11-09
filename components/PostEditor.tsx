@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import mermaid from 'mermaid';
 import { slugify } from '@/lib/client-utils';
+import Link from 'next/link';
 
 // Helper function to clean and normalize mermaid code content
 function cleanMermaidCode(content: string): string {
@@ -900,7 +901,9 @@ export default function PostEditor({ initialData, onSave, onPublish }: PostEdito
   return (
     <div className="w-full min-h-screen bg-gray-50">
       <div className="w-full p-6 space-y-6">
-        <h1 className="text-3xl font-bold mb-6">Jekyll Post Editor</h1>
+        <Link href="/">
+          <h1 className="text-3xl font-bold mb-6 cursor-pointer hover:opacity-80 transition-opacity">Jekyll Post Editor</h1>
+        </Link>
 
         {message && (
           <div
