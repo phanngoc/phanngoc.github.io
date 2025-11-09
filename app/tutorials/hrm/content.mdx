@@ -1,3 +1,5 @@
+import HRMFlowWrapper from './HRMFlowWrapper';
+
 # Hierarchical Reasoning Model (HRM) — Visual Tutorial
 
 Đa số LLM suy luận bằng cách sinh rất nhiều token (Chain-of-Thought), trong khi HRM tăng số bước suy luận nội bộ với hai tầng Controller / Worker.
@@ -8,6 +10,8 @@ Phần animation trên mô phỏng:
 - **L-module** chạy nhanh, xử lý chi tiết (K steps mỗi cycle)
 - **H-module** cập nhật chiến lược sau mỗi chu kỳ (1 step mỗi cycle)
 - **Q-head** quyết định khi nào dừng (Adaptive Computational Time)
+
+<HRMFlowWrapper />
 
 ## Kiến Trúc Chi Tiết
 
