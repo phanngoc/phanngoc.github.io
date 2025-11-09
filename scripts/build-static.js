@@ -12,11 +12,9 @@ const backupConfigPath = path.join(__dirname, '..', 'next.config.js.backup');
 const appDir = path.join(__dirname, '..', 'app');
 const apiDir = path.join(__dirname, '..', 'app', 'api');
 const postsDir = path.join(__dirname, '..', 'app', 'posts');
-const pageFile = path.join(__dirname, '..', 'app', 'page.tsx');
 // Move backups outside app directory so Next.js doesn't scan them
 const backupApiDir = path.join(__dirname, '..', '.build-backup', 'api');
 const backupPostsDir = path.join(__dirname, '..', '.build-backup', 'posts');
-const backupPageFile = path.join(__dirname, '..', '.build-backup', 'page.tsx');
 const backupDir = path.join(__dirname, '..', '.build-backup');
 
 try {
@@ -47,25 +45,8 @@ try {
     console.log('Temporarily moved posts routes...');
   }
   
-  if (fs.existsSync(pageFile)) {
-    fs.copyFileSync(pageFile, backupPageFile);
-    // Create a simple home page for static export
-    fs.writeFileSync(pageFile, `export default function Home() {
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold mb-4">Welcome</h1>
-        <p className="text-gray-600 mb-4">This is a static export for GitHub Pages.</p>
-        <a href="/tutorials/hrm/" className="text-blue-600 hover:underline">
-          View HRM Tutorial
-        </a>
-      </div>
-    </div>
-  );
-}
-`);
-    console.log('Temporarily replaced home page...');
-  }
+  // Note: app/page.tsx is now kept as-is because it can read posts at build time
+  // using getAllPosts() from lib/posts-static.ts
   
   // Copy static config
   fs.copyFileSync(staticConfigPath, mainConfigPath);
@@ -94,11 +75,6 @@ try {
     fs.renameSync(backupPostsDir, postsDir);
   }
   
-  if (fs.existsSync(backupPageFile)) {
-    fs.copyFileSync(backupPageFile, pageFile);
-    fs.unlinkSync(backupPageFile);
-  }
-  
   console.log('Static build completed!');
 } catch (error) {
   console.error('Build error:', error);
@@ -121,11 +97,6 @@ try {
       fs.rmSync(postsDir, { recursive: true, force: true });
     }
     fs.renameSync(backupPostsDir, postsDir);
-  }
-  
-  if (fs.existsSync(backupPageFile)) {
-    fs.copyFileSync(backupPageFile, pageFile);
-    fs.unlinkSync(backupPageFile);
   }
   
   process.exit(1);
