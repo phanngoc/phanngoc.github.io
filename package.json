@@ -14,7 +14,10 @@
     "pm2:logs": "pm2 logs ecosystem.config.js"
   },
   "dependencies": {
+    "@mdx-js/react": "^3.0.0",
+    "@next/mdx": "^14.0.0",
     "canvas": "^2.11.2",
+    "framer-motion": "^11.0.0",
     "gif-encoder-2": "^1.0.5",
     "js-yaml": "^4.1.0",
     "mermaid": "^10.6.1",
@@ -26,6 +29,7 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
+    "@mdx-js/loader": "^3.0.0",
     "@tailwindcss/typography": "^0.5.19",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.0.0",

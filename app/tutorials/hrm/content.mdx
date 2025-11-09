@@ -1,0 +1,141 @@
+# Hierarchical Reasoning Model (HRM) — Visual Tutorial
+
+Đa số LLM suy luận bằng cách sinh rất nhiều token (Chain-of-Thought), trong khi HRM tăng số bước suy luận nội bộ với hai tầng Controller / Worker.
+
+## Animation Kiến Trúc HRM
+
+Phần animation trên mô phỏng:
+- **L-module** chạy nhanh, xử lý chi tiết (K steps mỗi cycle)
+- **H-module** cập nhật chiến lược sau mỗi chu kỳ (1 step mỗi cycle)
+- **Q-head** quyết định khi nào dừng (Adaptive Computational Time)
+
+## Kiến Trúc Chi Tiết
+
+HRM bao gồm **4 thành phần chính**:
+
+1. **Input Network (f_in)**: Chiếu input thành biểu diễn working memory
+2. **Low-level Module (L)**: Module hồi quy xử lý nhanh, tính toán chi tiết
+3. **High-level Module (H)**: Module hồi quy xử lý chậm, lập kế hoạch trừu tượng
+4. **Output Network (f_out)**: Tạo prediction từ hidden state
+
+### Hierarchical Convergence
+
+Đây là cơ chế đột phá của HRM:
+
+**Vấn đề với RNN thông thường**: RNN thường hội tụ quá sớm - khi hidden state tiến đến điểm cố định, độ lớn của các cập nhật co lại, làm đình trệ tính toán và giới hạn độ sâu hiệu dụng.
+
+**Giải pháp của HRM**:
+
+1. Trong mỗi **cycle**, L-module cập nhật nhiều lần (ví dụ 8 steps) để hội tụ đến một **equilibrium cục bộ**
+2. Khi L-module đạt equilibrium, **H-module cập nhật một lần duy nhất**
+3. Cập nhật này tạo context mới cho L-module, "khởi động lại" quá trình tính toán của nó
+4. L-module bắt đầu hội tụ mới đến một equilibrium cục bộ khác
+
+**Kết quả**: 
+- Với T cycles và mỗi cycle có K steps, HRM đạt độ sâu hiệu dụng là **T × K**
+- Duy trì hoạt động tính toán cao trong nhiều bước (không bị decay như RNN thông thường)
+- Vẫn giữ được tính ổn định trong quá trình hội tụ
+
+## Ba Nguyên Lý Cốt Lõi
+
+HRM được thiết kế dựa trên ba nguyên lý tính toán nơron quan sát được trong não bộ:
+
+### 1. Hierarchical Processing (Xử Lý Phân Cấp)
+
+Não bộ tổ chức tính toán theo cấu trúc phân cấp qua các vùng vỏ não hoạt động ở các timescale khác nhau. Điều này cho phép reasoning đa tầng và sâu sắc.
+
+### 2. Temporal Separation (Phân Tách Thời Gian)
+
+Các vùng não khác nhau hoạt động ở tốc độ khác nhau:
+- **Vùng cấp thấp**: Xử lý nhanh, chi tiết
+- **Vùng cấp cao**: Xử lý chậm, trừu tượng, lập kế hoạch
+
+### 3. Recurrent Connectivity (Kết Nối Hồi Quy)
+
+Các vòng phản hồi hồi quy cho phép tinh chỉnh lặp đi lặp lại các biểu diễn nội bộ, giúp các vùng cấp cao hướng dẫn và các mạch cấp thấp thực thi.
+
+## Đột Phá Về Huấn Luyện
+
+### 1. One-Step Gradient Approximation
+
+**Vấn đề với BPTT**: Backpropagation Through Time yêu cầu lưu trữ hidden states từ forward pass, tốn bộ nhớ O(T), không khả thi sinh học và kém hiệu quả.
+
+**Giải pháp của HRM**: Sử dụng gradient approximation 1 bước, chỉ cần O(1) bộ nhớ:
+- Gradient path: `Output → H_final → L_final → Input embedding`
+- Dựa trên lý thuyết Deep Equilibrium Models (DEQ) và Implicit Function Theorem
+- Có thể triển khai dễ dàng với PyTorch autograd
+- Gần với cơ chế học của não bộ (local learning rules)
+
+### 2. Deep Supervision
+
+Lấy cảm hứng từ dao động nơron điều chỉnh thời điểm học trong não bộ:
+- Thực hiện nhiều **forward passes (segments)** trên cùng một mẫu dữ liệu
+- Mỗi segment tính loss và cập nhật parameters
+- Hidden state được "detached" giữa các segment → gradient 1-step
+- Cung cấp feedback thường xuyên hơn cho H-module
+- Hoạt động như cơ chế regularization
+
+### 3. Adaptive Computational Time (ACT)
+
+Não bộ linh hoạt chuyển đổi giữa "System 1" (tự động, nhanh) và "System 2" (suy nghĩ, chậm). HRM mô phỏng điều này:
+
+**Cơ chế**:
+- Q-head dự đoán Q-values cho 2 actions: "halt" và "continue"
+- Sử dụng Q-learning để học khi nào nên dừng
+- Động nhận định độ phức tạp của bài toán
+- Tiết kiệm tính toán khi bài toán đơn giản, dùng nhiều tài nguyên khi bài toán phức tạp
+
+**Inference-Time Scaling**: Chỉ cần tăng computational limit, HRM tự động cải thiện performance mà không cần training thêm!
+
+## Kết Quả Đáng Kinh Ngạc
+
+### ARC-AGI Challenge
+
+ARC-AGI (Abstraction and Reasoning Corpus) là benchmark đánh giá trí thông minh duy lý tổng quát - được xem là test IQ cho AI.
+
+**Kết quả HRM trên ARC-AGI-1**:
+- HRM (27M params, 30×30 grid = 900 tokens): **40.3%**
+- OpenAI o3-mini-high (hàng tỷ params): 34.5%
+- Claude 3.7 (8K context): 21.2%
+- Training: chỉ ~1000 examples, không pre-training!
+
+### Sudoku-Extreme
+
+Dataset mới với các Sudoku cực kỳ khó (trung bình 55.2 backtracks/puzzle so với 0.7 của dataset thông thường):
+
+**Kết quả**:
+- HRM: **Gần như hoàn hảo** (near-perfect accuracy)
+- CoT methods: **0%** (thất bại hoàn toàn)
+- Direct Transformer (cùng size): **0%** với 1000 examples
+- Transformer 175M params với 1M examples: vẫn accuracy thấp
+
+### Maze-Hard (30×30)
+
+Tìm đường tối ưu trong mê cung 30×30:
+
+**Kết quả**:
+- HRM: **Optimal paths** với accuracy cực cao
+- CoT methods: **0%**
+- Transformer 175M với 1M examples: dưới 5% accuracy
+
+## So Sánh Với Chain-of-Thought
+
+| Tiêu chí | CoT | HRM |
+|----------|-----|-----|
+| Pre-training | Cần | Không cần |
+| Data | Hàng triệu examples | 1000 examples |
+| Reasoning space | Language tokens | Latent space |
+| Độ sâu | Cố định | Adaptive (T×K) |
+| Backtracking | Khó khăn | Tự nhiên |
+| Latency | Cao (nhiều tokens) | Thấp (single forward pass) |
+
+## Tài Liệu Tham Khảo
+
+- **Paper**: [Hierarchical Reasoning Model](https://arxiv.org/abs/2506.21734)
+- **Code**: [GitHub - sapientinc/HRM](https://github.com/sapientinc/HRM)
+- **Company**: [Sapient Intelligence](https://sapient.inc)
+
+---
+
+**Lưu ý**: Bài viết này được viết dựa trên thông tin công bố tính đến tháng 11/2025. Đây là một lĩnh vực đang phát triển nhanh chóng.
+
