@@ -2,7 +2,7 @@
 layout: "post"
 title: "Source Code Structure Parsing: AST, CFG, and Data Flow Analysis"
 date: "2025-11-06 20:34:31 +0700"
-categories: ["ast"]
+tags: ["ast"]
 math: false
 ---
 
