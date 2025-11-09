@@ -6,6 +6,7 @@ vendor/
 # Next.js
 .next/
 out/
+.build-backup/
 node_modules/
 *.log
 .env*.local
