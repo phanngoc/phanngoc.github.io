@@ -607,145 +607,139 @@ Thiết kế này đảm bảo memory search **luôn hoạt động** dù enviro
 
 ## 12. Sơ đồ kiến trúc hoàn chỉnh
 
-```mermaid
-graph TD
-    %% ═══════════════════════════════════════════
-    %% INGESTION PIPELINE (Giai đoạn 0)
-    %% ═══════════════════════════════════════════
+```
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                        HYBRID MEMORY SEARCH PIPELINE                           ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
 
-    subgraph "GIAI ĐOẠN 0: INGESTION PIPELINE"
-        direction TB
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ GIAI ĐOẠN 0: INGESTION PIPELINE                                                 │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│   Memory Files (.md)              Session Transcripts (.jsonl)                  │
+│   MEMORY.md, memory/*.md          ~/.openclaw/agents/*/sessions/                │
+│         │                                    │                                  │
+│         ▼                                    ▼                                  │
+│   ┌─────────────┐                    ┌──────────────────┐                       │
+│   │ File Watcher│                    │ Session Event    │                       │
+│   │ debounce 1.5s│                   │ debounce 5s      │                       │
+│   └──────┬──────┘                    └────────┬─────────┘                       │
+│          │                                    │                                  │
+│          │                           ┌────────▼─────────┐                       │
+│          │                           │ Delta Check      │                       │
+│          │                           │ ≥100KB or ≥50msg?│                       │
+│          │                           └────────┬─────────┘                       │
+│          │                                    │ Yes                             │
+│          └────────────────┬───────────────────┘                                 │
+│                           ▼                                                     │
+│                  ┌─────────────────┐                                            │
+│                  │ chunkMarkdown() │                                            │
+│                  │ tokens=400      │                                            │
+│                  │ overlap=80      │                                            │
+│                  └────────┬────────┘                                            │
+│                           ▼                                                     │
+│                  ┌─────────────────┐      ┌─────────────────┐                   │
+│                  │ Embedding Cache │──Hit─▶│ chunks table    │                   │
+│                  │ Lookup          │      │ (text + JSON)   │                   │
+│                  └────────┬────────┘      └────────┬────────┘                   │
+│                           │ Miss                   │                            │
+│                           ▼                        ▼                            │
+│                  ┌─────────────────┐      ┌─────────────────┐                   │
+│                  │ Embed Provider  │      │ chunks_vec      │                   │
+│                  │ local→openai→   │      │ (Float32Array)  │                   │
+│                  │ gemini→voyage   │      └─────────────────┘                   │
+│                  └────────┬────────┘              │                             │
+│                           │                       ▼                             │
+│                           ▼              ┌─────────────────┐                    │
+│                  ┌─────────────────┐     │ chunks_fts      │                    │
+│                  │ L2 Normalize    │     │ (FTS5 indexed)  │                    │
+│                  └────────┬────────┘     └─────────────────┘                    │
+│                           │                                                     │
+│                           ▼                                                     │
+│                  ┌─────────────────┐                                            │
+│                  │ embedding_cache │                                            │
+│                  └─────────────────┘                                            │
+└─────────────────────────────────────────────────────────────────────────────────┘
 
-        MemFiles["Memory Files (.md)<br/>MEMORY.md, memory/*.md"]
-        SessionFiles["Session Transcripts (.jsonl)<br/>~/.openclaw/agents/*/sessions/"]
+                                    │
+                    ════════════════╪════════════════
+                                    │
+                                    ▼
 
-        subgraph "File Discovery"
-            Watcher["Chokidar File Watcher<br/>debounce 1.5s"]
-            SessionEvent["Session Transcript Event<br/>debounce 5s"]
-            DeltaCheck{"Delta Check<br/>≥100KB hoặc ≥50 messages?"}
-        end
+        ╔═══════════════════════════════════════════════════╗
+        ║              USER QUERY                            ║
+        ║  "Lỗi logic code xử lý thanh toán"                ║
+        ╚═══════════════════════════════════════════════════╝
+                           │
+           ┌───────────────┴───────────────┐
+           ▼                               ▼
 
-        subgraph "Chunking"
-            ChunkFn["chunkMarkdown()<br/>tokens=400, overlap=80<br/>maxChars=1600, overlapChars=320"]
-            Chunks["Chunks[]<br/>{startLine, endLine, text, hash(SHA-256)}"]
-        end
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ GIAI ĐOẠN 1: DUAL SEARCH (Song song)                                            │
+├──────────────────────────────────┬──────────────────────────────────────────────┤
+│                                  │                                              │
+│  VECTOR SEARCH (Semantic)        │  KEYWORD SEARCH (FTS/BM25)                   │
+│  ─────────────────────────       │  ──────────────────────────                  │
+│                                  │                                              │
+│  embedQuery(text)                │  buildFtsQuery()                             │
+│         │                        │  Regex: /[A-Za-z0-9_]+/g                     │
+│         ▼                        │         │                                    │
+│  Query Vector                    │         ▼                                    │
+│  [0.023, -0.045, ...]            │  "logic" AND "code" AND ...                  │
+│         │                        │         │                                    │
+│    ┌────┴────┐                   │         ▼                                    │
+│    ▼         ▼                   │  bm25(chunks_fts)                            │
+│ sqlite-vec  JS Fallback          │  MATCH + ORDER BY rank                       │
+│ (native)    (all chunks)         │         │                                    │
+│    │         │                   │         ▼                                    │
+│    └────┬────┘                   │  bm25RankToScore()                           │
+│         ▼                        │  score = 1/(1+rank)                          │
+│  vectorScore                     │         │                                    │
+│  = 1 - distance                  │         ▼                                    │
+│  (range 0-1)                     │  textScore (range 0-1)                       │
+│                                  │                                              │
+└──────────────────────────────────┴──────────────────────────────────────────────┘
+           │                               │
+           └───────────────┬───────────────┘
+                           ▼
 
-        subgraph "Embedding"
-            CacheCheck{"Embedding Cache<br/>Lookup by (provider, model,<br/>provider_key, hash)"}
-            EmbedAPI["Embedding Provider<br/>auto: local→openai→gemini→voyage"]
-            Normalize["sanitizeAndNormalizeEmbedding()<br/>NaN→0, L2 normalize"]
-            EmbedCache["Store in embedding_cache"]
-        end
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ GIAI ĐOẠN 2: SCORE FUSION (Weighted Sum)                                        │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│   Candidate Pool (24 per engine)                                                │
+│            │                                                                    │
+│            ▼                                                                    │
+│   Merge by chunk ID ◄─── Weights: vectorWeight=0.7, textWeight=0.3              │
+│            │                                                                    │
+│            ▼                                                                    │
+│   score = 0.7 × vectorScore + 0.3 × textScore                                   │
+│            │                                                                    │
+│            ▼                                                                    │
+│   Sort descending by score                                                      │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
 
-        subgraph "Storage (3 targets)"
-            ChunksTable["chunks table<br/>text + JSON embedding"]
-            VecTable["chunks_vec (sqlite-vec)<br/>Float32Array blob"]
-            FtsTable["chunks_fts (FTS5)<br/>indexed text"]
-        end
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ GIAI ĐOẠN 3: POST-PROCESSING                                                    │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│   Filter: score >= 0.35  ──▶  Limit: top 6  ──▶  Truncate: 700 chars            │
+│                                      │                                          │
+│                                      ▼                                          │
+│                          Add citation: path#L{start}-L{end}                     │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
 
-        MemFiles --> Watcher
-        SessionFiles --> SessionEvent
-        SessionEvent --> DeltaCheck
-        DeltaCheck -->|Yes| ChunkFn
-        Watcher --> ChunkFn
-        ChunkFn --> Chunks
-        Chunks --> CacheCheck
-        CacheCheck -->|Cache Hit| ChunksTable
-        CacheCheck -->|Cache Miss| EmbedAPI
-        EmbedAPI --> Normalize
-        Normalize --> EmbedCache
-        EmbedCache --> ChunksTable
-        ChunksTable --> VecTable
-        ChunksTable --> FtsTable
-    end
-
-    %% ═══════════════════════════════════════════
-    %% SEARCH PIPELINE
-    %% ═══════════════════════════════════════════
-
-    UserQuery(("User Query<br/>'Lỗi logic code xử lý thanh toán'"))
-
-    subgraph "GIAI ĐOẠN 1: DUAL SEARCH (Song song)"
-
-        subgraph "Vector Search (Semantic)"
-            direction TB
-            QueryEmbed["embedQuery(text)<br/>Cùng provider đã dùng lúc index"]
-            QueryVec["Query Vector<br/>[0.023, -0.045, ...]"]
-
-            subgraph "sqlite-vec Path"
-                VecSQL["SQL: vec_distance_cosine()<br/>JOIN chunks_vec + chunks<br/>ORDER BY dist ASC"]
-            end
-
-            subgraph "JS Fallback Path"
-                JSFallback["Load ALL chunks<br/>Parse JSON embeddings<br/>cosineSimilarity() in JS"]
-            end
-
-            VecScore["vectorScore = 1 - distance<br/>(range 0-1)"]
-
-            QueryEmbed --> QueryVec
-            QueryVec --> VecSQL
-            QueryVec -.->|sqlite-vec unavailable| JSFallback
-            VecSQL --> VecScore
-            JSFallback --> VecScore
-        end
-
-        subgraph "Keyword Search (FTS/BM25)"
-            direction TB
-            Tokenize["buildFtsQuery()<br/>Regex: /[A-Za-z0-9_]+/g<br/>Join with AND, double-quote"]
-            FtsQuery["FTS Query<br/>'&quot;logic&quot; AND &quot;code&quot; AND ...'"]
-            BM25SQL["SQL: bm25(chunks_fts)<br/>MATCH query AND model filter<br/>ORDER BY rank ASC"]
-            RankConvert["bm25RankToScore()<br/>score = 1 / (1 + max(0, rank))"]
-            TextScore["textScore<br/>(range 0-1)"]
-
-            Tokenize --> FtsQuery
-            FtsQuery --> BM25SQL
-            BM25SQL --> RankConvert
-            RankConvert --> TextScore
-        end
-    end
-
-    subgraph "GIAI ĐOẠN 2: SCORE FUSION (Weighted Sum)"
-        CandidatePool["Candidate Pool<br/>candidates = min(200, maxResults * 4)<br/>= 24 candidates per engine"]
-        MergeByID["Merge by chunk ID<br/>(Map&lt;id, {vectorScore, textScore}&gt;)"]
-        WeightConfig{{"Weights (normalized sum=1.0)<br/>vectorWeight: 0.7<br/>textWeight: 0.3"}}
-        FinalCalc["score = 0.7 * vectorScore<br/>      + 0.3 * textScore"]
-        Sort["Sort descending by score"]
-
-        VecScore --> CandidatePool
-        TextScore --> CandidatePool
-        CandidatePool --> MergeByID
-        WeightConfig -.-> MergeByID
-        MergeByID --> FinalCalc
-        FinalCalc --> Sort
-    end
-
-    subgraph "GIAI ĐOẠN 3: POST-PROCESSING"
-        MinScore["Filter: score >= 0.35<br/>(minScore default)"]
-        MaxResults["Limit: top 6 results<br/>(maxResults default)"]
-        Truncate["Truncate snippet: max 700 chars"]
-        Citation["Add citation<br/>path#L{start}-L{end}"]
-
-        Sort --> MinScore
-        MinScore --> MaxResults
-        MaxResults --> Truncate
-        Truncate --> Citation
-    end
-
-    FinalResult[["MemorySearchResult[]<br/>{path, startLine, endLine,<br/>score, snippet, source, citation}"]]
-
-    UserQuery --> QueryEmbed
-    UserQuery --> Tokenize
-    Citation --> FinalResult
-
-    %% ═══════════════════════════════════════════
-    %% NOTES
-    %% ═══════════════════════════════════════════
-
-    style UserQuery fill:#e1f5fe,stroke:#0288d1,stroke-width:2px
-    style FinalResult fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-    style WeightConfig fill:#fff3e0,stroke:#ef6c00
-    style CacheCheck fill:#fce4ec,stroke:#c62828
-    style DeltaCheck fill:#fce4ec,stroke:#c62828
+        ╔═══════════════════════════════════════════════════╗
+        ║              MemorySearchResult[]                  ║
+        ║  {path, startLine, endLine, score, snippet,       ║
+        ║   source, citation}                                ║
+        ╚═══════════════════════════════════════════════════╝
 ```
 
 ---
