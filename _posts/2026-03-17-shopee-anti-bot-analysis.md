@@ -242,6 +242,117 @@ Real users không mở thẳng `?page=5&sortBy=pop`. Họ vào trang chủ, sear
 
 ---
 
+## Hành Trình Thất Bại Hoàn Toàn (Ghi Chép Thực Tế)
+
+Đây là phần tôi muốn viết rõ nhất — vì hầu hết blog tech chỉ show success story. Đây là timeline thất bại theo thứ tự:
+
+### Attempt 1: Go + go-rod (Chromium)
+```
+Result: Redirect ngay → /verify/traffic/error
+Time to fail: ~3 giây
+Reason: Chromium fingerprint bị blacklist
+```
+
+### Attempt 2: Go + go-rod + stealth (Chromium)
+```
+Result: Vẫn bị /verify/traffic/error
+Time to fail: ~3 giây  
+Reason: Stealth mode không đủ che TLS fingerprint của Chromium
+```
+
+### Attempt 3: Chrome profile thật (copy cookies)
+```
+Result: login page — cookies không decrypt được
+Time to fail: ~5 giây
+Reason: Chrome encrypt cookies bằng OS keyring, copy raw file ra không dùng được
+```
+
+### Attempt 4: Playwright Chromium + stealth
+```
+Result: /verify/captcha
+Time to fail: ~8 giây
+Reason: Chromium headless fingerprint đã bị blacklist
+```
+
+### Attempt 5: Playwright Firefox + Chrome cookies (pycookiecheat) ← **BREAKTHROUGH**
+```
+Result: ✅ 60 items page 1!
+Pages crawled: 1 → captcha
+Reason: Firefox TLS profile khác, pycookiecheat decrypt được cookies
+```
+
+### Attempt 6: Human behavior simulation
+```python
+# Tôi implement:
+async def human_scroll(page):          # smooth scroll với random pauses
+async def human_mouse_wiggle(page):    # random mouse movement
+# + delay 20-40s giữa các trang
+# + quay lại homepage giữa các page
+
+Result: Vẫn captcha sau 1-2 trang
+Pages crawled: 2 → captcha
+Reason: Behavior delay tốt nhưng IP reputation vẫn bị flag
+```
+
+### Attempt 7: Browser restart + re-inject cookies
+```
+Result: 1 lần recover, lần 2 permanent block
+Reason: Server đã revoke SPC_EC token, inject lại vô nghĩa
+```
+
+### Attempt 8: ScraperAPI (free plan)
+```
+Result: "requires Ultra Premium proxies" — paid plan only
+Cost: Free plan không work với Shopee
+```
+
+### Attempt 9: Free proxy lists (220 proxies)
+```
+Result: 3/220 pass basic test, 0/3 pass Shopee
+Reason: Tất cả public proxy IPs đã bị Shopee pre-blacklist
+```
+
+### Attempt 10: TOR (5 different exit nodes)
+```
+IPs tried:
+- 38.135.24.72   → /verify/traffic ❌
+- 185.62.56.249  → /verify/captcha ❌  
+- 192.42.116.46  → /verify/captcha ❌
+- 192.42.116.93  → /verify/captcha ❌
+- 192.159.99.27  → /verify/traffic ❌
+
+Result: 5/5 bị block
+Reason: Shopee maintain danh sách TOR exit nodes và blacklist toàn bộ
+```
+
+**Tổng kết sau ~5 giờ chiến đấu:**
+
+```
+Attempts:  10
+Success:   1 (Firefox + cookies, ~1 trang)
+Products:  251 / ~6,000 (4%)
+Proxies:   220+ tested, 0 work
+Cost:      $0 (free tier only)
+```
+
+---
+
+## Điều Thực Sự Cần Để Bypass
+
+Sau tất cả những thử nghiệm trên, đây là **điều kiện cần** (không phải đủ) để crawl Shopee ở scale:
+
+**1. Residential proxy** — không phải datacenter, không phải TOR, không phải public proxy. Phải là IP từ ISP thật của người dùng (Viettel, VNPT, FPT...). Chi phí: ~$15-50/tháng cho rotating residential.
+
+**2. Real browser fingerprint** — Firefox hoặc Chrome built bằng Playwright với đầy đủ GPU/canvas rendering (không phải headless hoặc virtual display). Chạy trên máy thật hoặc cloud VM có GPU.
+
+**3. Session warming** — không jump thẳng vào category page. Phải simulate user journey: trang chủ → search → filter → browse → pagination.
+
+**4. Cookie refresh** — SPC_EC token expire nhanh. Cần mechanism tự động login lại và lấy token mới thay vì reuse token cũ.
+
+Nói thẳng: **không có giải pháp free nào bypass Shopee ở thời điểm 2026**. Shopee đã đầu tư đủ để làm cho ROI của scraper nhỏ lẻ trở nên âm.
+
+---
+
 ## Kết Luận
 
 Shopee đã đầu tư nghiêm túc vào anti-bot — đây là hệ thống multi-layer với từng layer bắt một loại attacker khác nhau:
@@ -249,12 +360,15 @@ Shopee đã đầu tư nghiêm túc vào anti-bot — đây là hệ thống mul
 - **Script kiddies** → bị chặn bởi TLS fingerprint
 - **Basic Selenium/Playwright** → bị chặn bởi canvas fingerprint + IP reputation
 - **Sophisticated bots** → bị chặn bởi behavioral analysis
-- **Residential proxies** → bị chặn bởi CAPTCHA + rate limiting
+- **TOR / free proxies** → bị chặn bởi IP reputation blacklist (pre-emptive)
+- **Residential proxies** → bypass được IP layer, nhưng còn behavioral + session analysis
 
-Hệ thống này không "unhackable" — nhưng chi phí để bypass nó (residential proxy ~$15-50/tháng, sophisticated behavior engine vài ngày dev) đủ để filter 99% attackers.
+Hệ thống này không "unhackable" — nhưng chi phí để bypass nó đã vượt qua ngưỡng mà hầu hết side projects có thể chịu được. Đó là mục tiêu thực sự: không cần block 100%, chỉ cần làm cho cost > benefit.
 
-Từ góc nhìn defensive, đây là một case study xuất sắc về **defense in depth** cho web application. Từ góc nhìn offensive... well, biết địch biết ta, trăm trận trăm thắng 🙂
+Từ góc nhìn defensive, đây là một case study xuất sắc về **economic security** — bảo mật không phải bằng tường lửa tuyệt đối mà bằng cách tăng chi phí tấn công lên đủ cao. Từ góc nhìn offensive... thất bại cũng là một loại học 🙂
 
 ---
 
 **Source code** của crawler (Python + Playwright + proxy rotation): [github.com/phanngoc/shopee-crawler](https://github.com/phanngoc/shopee-crawler)
+
+*Dataset 251 sản phẩm crawl được: [kaggle.com/ngocphansun](https://www.kaggle.com/ngocphansun)*
