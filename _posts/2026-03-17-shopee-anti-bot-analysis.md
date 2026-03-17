@@ -18,19 +18,48 @@ Tôi vừa mất 3 giờ chiến đấu với hệ thống anti-bot của Shopee
 
 ## Bức Tranh Tổng Thể: Shopee Dùng Gì?
 
-Qua quan sát các network requests và response patterns, Shopee triển khai **nhiều lớp bảo vệ** chồng chéo lên nhau:
+Qua quan sát trực tiếp network requests, response patterns và hàng chục lần bị chặn, đây là kiến trúc bảo vệ đầy đủ mà Shopee triển khai:
+
+![Defense-in-Depth Architecture](/assets/shopee-antibot/01-defense-in-depth.png)
+
+Một request từ bot phải vượt qua **6 lớp kiểm tra độc lập**, mỗi lớp bắt một loại attacker khác nhau:
 
 ```
-Request → [Layer 1: TLS Fingerprint] → [Layer 2: IP Reputation] 
-        → [Layer 3: Bot Behavior] → [Layer 4: Session Token] 
-        → [Layer 5: Canvas/WebGL Fingerprint] → Response
+[Bot Request]
+      │
+      ▼
+[L1] TLS Fingerprint ──── JA3/JA4 hash mismatch → BLOCK
+      │ pass
+      ▼
+[L2] IP Reputation ──────  Datacenter/TOR/proxy AS → BLOCK
+      │ pass
+      ▼
+[L3] Browser Fingerprint ─ Canvas hash, WebGL → BLOCK
+      │ pass
+      ▼
+[L4] Behavioral Analysis ─ Mouse entropy, scroll timing → CAPTCHA
+      │ pass
+      ▼
+[L5] Session Token ──────  SPC_EC server-side revoke → BLOCK
+      │ pass
+      ▼
+[L6] Correlation ID ─────  Honeypot tracking_id → PERMANENT BAN
+      │ pass
+      ▼
+[Response] ✓
 ```
 
-Không có layer nào là "magic bullet" — chính sự **kết hợp nhiều signals** mới tạo nên độ khó.
+Không có layer nào là "magic bullet" — chính sự **kết hợp 6 signals đồng thời** mới tạo nên độ khó thực sự. Bypass một layer không đủ nếu các layer còn lại vẫn fire.
+
+### Vì sao khó bypass đến vậy?
+
+Mỗi layer được thiết kế để **fail independently** — tức là nếu layer 2 (IP) pass nhưng layer 4 (behavior) fail, request vẫn bị block. Không có "shortcut" nào bypass toàn bộ stack chỉ bằng một trick đơn lẻ.
 
 ---
 
 ## Layer 1: TLS Fingerprinting (JA3/JA4)
+
+![TLS Fingerprint Comparison](/assets/shopee-antibot/02-tls-fingerprint.png)
 
 Đây là thứ đầu tiên tôi gặp phải và không nhận ra ngay.
 
@@ -51,6 +80,8 @@ Tools như **curl**, **requests** (Python), hay Playwright Chromium có JA3 hash
 ---
 
 ## Layer 2: IP Reputation & Rate Limiting
+
+![IP Reputation Hierarchy](/assets/shopee-antibot/05-ip-reputation.png)
 
 Đây là layer chặn tôi nhiều nhất — và đây là những gì tôi quan sát được:
 
@@ -83,6 +114,8 @@ Pattern này cho thấy IP bị "cool down" sau N requests — không phải ses
 ## Layer 3: Behavioral Fingerprinting
 
 Layer này tinh vi nhất và khó bypass nhất. Shopee collect các signals sau **trong JavaScript**:
+
+![Mouse Movement Entropy](/assets/shopee-antibot/03-mouse-entropy.png)
 
 ### Mouse Movement Entropy
 
@@ -129,6 +162,8 @@ Human timing:  [87ms, 134ms, 92ms, 201ms]    ← log-normal distribution
 ---
 
 ## Layer 4: Session Token Architecture
+
+![Session Token Lifecycle](/assets/shopee-antibot/04-session-token.png)
 
 Đây là discovery thú vị nhất. Shopee dùng 2 loại tokens:
 
