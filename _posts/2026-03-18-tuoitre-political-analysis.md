@@ -196,3 +196,73 @@ Stack:
 ---
 
 *Crawled & analyzed: 2026-03-18 | Tools: Go 1.18, Python 3.10, chromedp v0.9.5*
+
+---
+
+## Phần 2: Gensim LDA — Probabilistic Topic Modeling
+
+Sau khi có kết quả từ TF-IDF K-Means, mình apply thêm **Latent Dirichlet Allocation (LDA)** từ Gensim để có model probabilistic — mỗi document không bị gán cứng vào 1 cluster mà có phân phối xác suất trên tất cả topics.
+
+### Tại sao LDA tốt hơn K-Means cho text?
+
+| | K-Means + TF-IDF | Gensim LDA |
+|--|--|--|
+| Assignment | Hard (1 cluster) | Soft (phân phối xác suất) |
+| Interpretability | Centroid keywords | Top words per topic |
+| Handles polysemy | ❌ | ✅ (từ đa nghĩa) |
+| Coherence metric | ❌ | ✅ C_V coherence |
+
+### Chọn số topics bằng Coherence Score
+
+```python
+from gensim.models import LdaMulticore
+from gensim.models.coherencemodel import CoherenceModel
+
+for k in [10, 15, 20, 25]:
+    lda = LdaMulticore(corpus=bow_corpus, id2word=dictionary, 
+                       num_topics=k, workers=4, passes=15)
+    cm = CoherenceModel(model=lda, texts=docs, coherence='c_v')
+    print(f"k={k}: coherence={cm.get_coherence():.4f}")
+```
+
+```
+k=10: coherence=0.4817  ← best
+k=15: coherence=0.4726
+k=20: coherence=0.4758
+k=25: coherence=0.4674
+```
+
+**k=10** tối ưu — thêm topics không cải thiện coherence.
+
+### 10 LDA Topics tìm được
+
+| Topic | Label | Bài | Top words |
+|-------|-------|-----|-----------|
+| 0 | 🏛️ Chính trị VN (bầu cử, đối ngoại) | 1,672 | quốc, hội, tổng, mỹ, cử |
+| 1 | ⚔️ Chiến sự Iran-Israel-Mỹ | 1,054 | iran, mỹ, quân, bay, tàu, chiến |
+| 3 | 🎓 Giáo dục (TP.HCM, đại học) | 2,612 | học, sinh, trường, đại, giáo |
+| 4 | 👮 Pháp luật / Công an | 2,172 | công an, tỉnh, tra, vụ, án |
+| 5 | 🏥 Sức khỏe / Y tế | 1,387 | bệnh, viện, bác, khoa |
+| 6 | 📈 Kinh tế / BĐS / Doanh nghiệp | 2,037 | giá, doanh, đồng, đầu, sản |
+| 7 | 🎭 Văn hóa / Nghệ sĩ | 2,612 | nghệ, việt, nam, diễn, văn |
+| 9 | 🚗 Giao thông / Tết | 1,399 | tết, đường, xe, khách, hcm |
+
+### LDA Insights — Chiến sự Iran rõ hơn
+
+Với LDA, topic ⚔️ Chiến sự được phân biệt rõ với 🏛️ Chính trị VN — điều mà K-Means gộp chung do cùng xuất hiện từ "Mỹ", "tổng thống". LDA nhận ra:
+- Topic 0 → `quốc hội, cử, biểu` = bầu cử trong nước
+- Topic 1 → `iran, quân, bay, tàu, chiến` = chiến sự quân sự
+
+**Topic confidence** (avg probability) của ⚔️ Chiến sự tăng vọt từ tuần 2026-02-23, trong khi confidence của 🚗 Giao thông/Tết giảm — người đọc chuyển sang đọc tin chiến sự, tòa soạn follow accordingly.
+
+### Interactive LDA Charts
+
+- 🧠 [LDA Heatmap: Topic × Tuần](/assets/tuoitre-politics/lda_heatmap.html)
+- 🔑 [Top Keywords mỗi Topic](/assets/tuoitre-politics/lda_keywords.html)
+- 📈 [LDA Timeline 2026](/assets/tuoitre-politics/lda_timeline.html)
+- 🌡️ [Topic Confidence theo tuần](/assets/tuoitre-politics/lda_confidence.html)
+- 📊 [LDA Topic Shift: Trước/Sau chiến sự](/assets/tuoitre-politics/lda_shift.html)
+
+---
+
+*Updated 2026-03-18 với Gensim LDA (k=10, coherence=0.4817)*
