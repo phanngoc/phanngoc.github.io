@@ -6,13 +6,24 @@ tags: ["ai-agent", "langchain", "langgraph", "architecture", "bytedance", "pytho
 math: false
 ---
 
-> **TL;DR:** DeerFlow 2.0 là rewrite hoàn toàn của ByteDance, đạt #1 GitHub Trending ngày 28/2/2026 với 46k ⭐. Kiến trúc xoay quanh **middleware pipeline composable**, **memory có schema rõ ràng**, và **subagent executor với ThreadPool + timeout**. Bài này mổ xẻ từng phần từ source code thực tế.
+> **TL;DR:** DeerFlow 2.0 là rewrite hoàn toàn của ByteDance, đạt #1 GitHub Trending ngày 28/2/2026 với 46k ⭐. Kiến trúc xoay quanh **middleware pipeline composable**, **memory có schema rõ ràng**, và **subagent executor với ThreadPool + timeout**. Bài này mổ xẻ từng phần từ source code thực tế, sau đó so sánh với OpenClaw để hiểu khi nào nên dùng cái nào.
 
 ---
 
-Tuần này mình clone DeerFlow về và đọc từng file. Đây là những gì thú vị nhất.
+## Mục lục
 
-## Tổng quan: Từ Deep Research → Super Agent Harness
+1. [Tổng quan](#tổng-quan)
+2. [Middleware Pipeline](#phần-1-middleware-pipeline)
+3. [Memory System](#phần-2-memory-system)
+4. [Subagent Executor](#phần-3-subagent-executor)
+5. [ThreadState — Custom LangGraph State](#phần-4-threadstate)
+6. [DeerFlow vs OpenClaw](#phần-5-deerflow-vs-openclaw)
+7. [Lessons Learned](#lessons-learned)
+8. [Nguồn & Stack](#nguồn--stack)
+
+---
+
+## Tổng quan
 
 DeerFlow v1 là một Deep Research framework đơn giản. V2 là rewrite hoàn toàn — không share một dòng code nào — thành một **Super Agent Harness** có thể:
 
@@ -26,14 +37,14 @@ Stack: Python 3.12 + LangChain + LangGraph + FastAPI. Frontend: Next.js.
 
 ---
 
-## Phần 1: Middleware Pipeline — Điểm hay nhất
+## Phần 1: Middleware Pipeline
 
 Thay vì hardcode mọi logic vào agent, DeerFlow dùng **middleware chain** có thứ tự rõ ràng:
 
 ```python
 # Từ lead_agent/agent.py — thứ tự này không phải ngẫu nhiên
 middlewares = [
-    ThreadDataMiddleware(),       # 1. inject workspace paths
+    ThreadDataMiddleware(),        # 1. inject workspace paths
     UploadsMiddleware(),           # 2. handle file uploads (cần thread_id từ #1)
     DanglingToolCallMiddleware(),  # 3. patch orphan ToolMessages
     SummarizationMiddleware(),     # 4. compress context SỚM để giảm tokens
@@ -127,12 +138,6 @@ class MemoryUpdateQueue:
         self._queue = [c for c in self._queue if c.thread_id != thread_id]
         self._queue.append(context)
         self._reset_timer()  # reset debounce
-
-    def _reset_timer(self):
-        if self._timer: self._timer.cancel()
-        self._timer = threading.Timer(debounce_seconds, self._process_queue)
-        self._timer.daemon = True
-        self._timer.start()
 ```
 
 Elegant — nhiều conversations trong cùng debounce window được batch, và luôn dùng state mới nhất của mỗi thread.
@@ -166,12 +171,10 @@ SubagentExecutor
 ```python
 async def _aexecute(self, task: str, result_holder):
     agent = self._create_agent()
-
     # stream thay vì invoke → capture từng AIMessage real-time
     async for chunk in agent.astream(state, stream_mode="values"):
         last_msg = chunk.get("messages", [])[-1]
         if isinstance(last_msg, AIMessage):
-            # deduplicate bằng message ID
             if not any(m.get("id") == last_msg.id for m in result.ai_messages):
                 result.ai_messages.append(last_msg.model_dump())
 ```
@@ -189,8 +192,6 @@ except FuturesTimeoutError:
 
 ### Tránh đệ quy vô hạn
 
-Builtin `bash_agent` config:
-
 ```python
 SubagentConfig(
     name="bash",
@@ -201,19 +202,13 @@ SubagentConfig(
 )
 ```
 
-Một dòng `disallowed_tools=["task"]` ngăn infinite recursion.
-
-### Trace ID xuyên suốt
-
-```python
-logger.info(f"[trace={self.trace_id}] Subagent {config.name} starting...")
-```
-
-Parent truyền `trace_id` xuống subagent. Log có thể follow toàn bộ chain parent → subagent1 mà không cần distributed tracing phức tạp.
+Một dòng `disallowed_tools=["task"]` ngăn infinite recursion. Trace ID được parent truyền xuống subagent, giúp follow log chain mà không cần distributed tracing phức tạp.
 
 ---
 
-## Phần 4: ThreadState — Custom LangGraph State
+## Phần 4: ThreadState
+
+Custom LangGraph State với reducers thông minh:
 
 ```python
 class ThreadState(AgentState):
@@ -235,51 +230,11 @@ class ThreadState(AgentState):
 
 ---
 
-## So sánh DeerFlow vs OpenClaw
-
-| Khía cạnh | DeerFlow 2.0 | OpenClaw |
-|-----------|-------------|----------|
-| Memory | JSON schema 6 fields + LLM summarize | MEMORY.md markdown free-form |
-| Memory update | Async queue + debounce | Manual / heartbeat |
-| Subagent | Tool `task` → ThreadPool | `sessions_spawn` → ACP |
-| Subagent limit | Hard cap 2-4 concurrent | Unlimited |
-| Loop detection | MD5 hash + sliding window | ❌ |
-| Trace ID | Parent → child | Session ID |
-| Channels | Telegram, Slack, Feishu | Telegram, Discord, Signal, WhatsApp |
-| Scheduling | ❌ | Cron + heartbeat |
-| Core framework | LangChain + LangGraph | Custom |
-
----
-
-## Lessons Learned
-
-**1. Middleware pattern > monolithic agent**
-Dễ add/remove behavior, dễ test từng middleware riêng lẻ, dễ debug.
-
-**2. Memory cần schema, không phải free-form**
-`workContext`, `personalContext`, `topOfMind` tách biệt → LLM summarize đúng chỗ → recall chính xác hơn.
-
-**3. Loop detection là must-have**
-Hash tool calls + sliding window là approach đơn giản mà hiệu quả cho production.
-
-**4. Debounce queue cho memory update**
-Không cần update memory sau mỗi message. Batch + debounce giảm API calls đáng kể.
-
-**5. Subagent không được spawn subagent**
-`disallowed_tools=["task"]` — một dòng config ngăn infinite recursion.
-
----
-
-*Nguồn: `git clone https://github.com/bytedance/deer-flow` — phân tích tháng 3/2026*
-*Stack: Python 3.12 · LangChain · LangGraph · FastAPI · Next.js*
-
----
-
-## DeerFlow vs OpenClaw: Khi nào dùng cái nào?
+## Phần 5: DeerFlow vs OpenClaw
 
 Sau khi mổ xẻ DeerFlow, mình thấy nó có nhiều điểm tương đồng với **OpenClaw** — cả hai đều là agent harness với skills/channels. Nhưng triết lý thiết kế khác nhau rõ ràng.
 
-### Bảng so sánh chi tiết
+### Bảng so sánh
 
 | Khía cạnh | DeerFlow 2.0 | OpenClaw |
 |-----------|-------------|----------|
@@ -299,9 +254,9 @@ Sau khi mổ xẻ DeerFlow, mình thấy nó có nhiều điểm tương đồng
 
 ### Triết lý khác nhau
 
-**DeerFlow** là **"task-centric"** — bạn đưa task, nó plan → execute → deliver. Tối ưu cho research, coding, report generation. Think: "Do this complex thing for me."
+**DeerFlow** là **"task-centric"** — bạn đưa task, nó plan → execute → deliver. Tối ưu cho research, coding, report generation. Think: *"Do this complex thing for me."*
 
-**OpenClaw** là **"ambient-centric"** — agent chạy nền, chủ động monitor, proactive interrupt khi cần. Tối ưu cho personal productivity. Think: "Be my always-on assistant."
+**OpenClaw** là **"ambient-centric"** — agent chạy nền, chủ động monitor, proactive interrupt khi cần. Tối ưu cho personal productivity. Think: *"Be my always-on assistant."*
 
 ### Use case thực tế
 
@@ -319,24 +274,49 @@ Chạy cron job kiểm tra server       → OpenClaw
 
 ### Điều DeerFlow làm tốt hơn
 
-**LoopDetectionMiddleware** là thứ OpenClaw không có nhưng nên có. Khi agent gọi tool lặp đi lặp lại, DeerFlow tự detect và force-stop sau 5 lần. Đơn giản nhưng critical cho production.
+**LoopDetectionMiddleware** là thứ OpenClaw không có nhưng nên có. Khi agent gọi tool lặp đi lặp lại, DeerFlow tự detect và force-stop sau 5 lần — critical cho production.
 
-**Memory schema** của DeerFlow granular hơn — phân biệt `workContext` vs `personalContext` vs `topOfMind` giúp LLM recall đúng loại thông tin. OpenClaw dùng MEMORY.md free-form linh hoạt hơn nhưng recall ít chính xác hơn.
+**Memory schema** granular hơn — phân biệt `workContext` vs `personalContext` vs `topOfMind` giúp LLM recall đúng loại thông tin.
 
 ### Điều OpenClaw làm tốt hơn
 
-**Heartbeat system** — OpenClaw tự động check email, calendar, mentions và proactive notify. DeerFlow hoàn toàn reactive, không làm gì nếu bạn không hỏi.
+**Heartbeat system** — OpenClaw tự động check email, calendar, mentions và proactive notify. DeerFlow hoàn toàn reactive.
 
-**Channel diversity** — Signal, WhatsApp, Discord ngoài Telegram. Đặc biệt quan trọng nếu team dùng nhiều platform khác nhau.
+**Channel diversity** — Signal, WhatsApp, Discord ngoài Telegram.
 
-**clawhub.com** — Skills marketplace cho phép install/update features không cần code. DeerFlow phải tự viết tools.
+**clawhub.com** — Skills marketplace cho phép install features không cần code.
 
 ### Verdict
 
-Nếu build **SaaS có AI feature** → DeerFlow SDK.  
-Nếu cần **personal assistant 24/7** → OpenClaw.  
-Nếu có budget → Cả hai: OpenClaw làm "daily driver", DeerFlow làm "heavy worker" khi cần.
+> Nếu build **SaaS có AI feature** → DeerFlow SDK.  
+> Nếu cần **personal assistant 24/7** → OpenClaw.  
+> Nếu có budget → Cả hai: OpenClaw làm "daily driver", DeerFlow làm "heavy worker".
 
 ---
 
-*Tested: DeerFlow + Claude Sonnet 4.6 via CLIProxyAPI OAuth (không cần API key trực tiếp)*
+## Lessons Learned
+
+**1. Middleware pattern > monolithic agent**  
+Dễ add/remove behavior, dễ test từng middleware riêng lẻ, dễ debug. Pattern này giống Express.js middleware — ai đã làm Node.js sẽ thấy quen ngay.
+
+**2. Memory cần schema, không phải free-form**  
+`workContext`, `personalContext`, `topOfMind` tách biệt → LLM summarize đúng chỗ → recall chính xác hơn. Free-form markdown linh hoạt hơn nhưng recall kém hơn.
+
+**3. Loop detection là must-have cho production**  
+Hash tool calls + sliding window là approach đơn giản mà hiệu quả. Không có cái này, agent có thể bị stuck vô hạn gây chi phí không kiểm soát.
+
+**4. Debounce queue cho memory update**  
+Không cần update memory sau mỗi message. Batch + debounce giảm API calls đáng kể, đồng thời luôn giữ state mới nhất.
+
+**5. Subagent không được spawn subagent**  
+`disallowed_tools=["task"]` — một dòng config ngăn infinite recursion. Đơn giản nhưng dễ bỏ sót khi tự build.
+
+---
+
+## Nguồn & Stack
+
+**Source code:** `git clone https://github.com/bytedance/deer-flow` (phân tích commit tháng 3/2026)
+
+**Stack DeerFlow:**
+- Python 3.12 · LangChain · LangGraph · FastAPI · Next.js
+- Tested với: Claude Sonnet 4.6 via [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) OAuth (Max subscription, không cần API key trực tiếp)
