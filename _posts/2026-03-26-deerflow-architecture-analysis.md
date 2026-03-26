@@ -272,3 +272,71 @@ Không cần update memory sau mỗi message. Batch + debounce giảm API calls 
 
 *Nguồn: `git clone https://github.com/bytedance/deer-flow` — phân tích tháng 3/2026*
 *Stack: Python 3.12 · LangChain · LangGraph · FastAPI · Next.js*
+
+---
+
+## DeerFlow vs OpenClaw: Khi nào dùng cái nào?
+
+Sau khi mổ xẻ DeerFlow, mình thấy nó có nhiều điểm tương đồng với **OpenClaw** — cả hai đều là agent harness với skills/channels. Nhưng triết lý thiết kế khác nhau rõ ràng.
+
+### Bảng so sánh chi tiết
+
+| Khía cạnh | DeerFlow 2.0 | OpenClaw |
+|-----------|-------------|----------|
+| **Memory** | JSON schema 6 fields + LLM summarize async | MEMORY.md markdown free-form |
+| **Memory update** | Debounce queue + batch | Manual / heartbeat periodic |
+| **Subagent spawn** | Tool `task` → ThreadPool | `sessions_spawn` → ACP runtime |
+| **Subagent limit** | Hard cap 2-4 concurrent | Unlimited |
+| **Loop detection** | MD5 hash + sliding window ✅ | ❌ không có |
+| **Trace ID** | Parent → child propagation | Session ID per run |
+| **Channels** | Telegram, Slack, Feishu | Telegram, Discord, Signal, WhatsApp |
+| **Scheduling** | ❌ không có | Cron + heartbeat 24/7 |
+| **Skills** | Extensible (clawhub-style) | clawhub.com marketplace |
+| **Core framework** | LangChain + LangGraph | Custom (Node.js) |
+| **Frontend** | Next.js UI ✅ | CLI / Telegram UI |
+| **Multi-user** | ✅ designed for teams | ❌ single-user personal |
+| **Coding agent** | Sandbox execution | Spawn Codex/Claude Code in thread |
+
+### Triết lý khác nhau
+
+**DeerFlow** là **"task-centric"** — bạn đưa task, nó plan → execute → deliver. Tối ưu cho research, coding, report generation. Think: "Do this complex thing for me."
+
+**OpenClaw** là **"ambient-centric"** — agent chạy nền, chủ động monitor, proactive interrupt khi cần. Tối ưu cho personal productivity. Think: "Be my always-on assistant."
+
+### Use case thực tế
+
+```
+Bạn cần...                          → Dùng
+──────────────────────────────────────────────────────
+Research report dài (1-2 giờ)       → DeerFlow
+Deploy code với CI/CD               → DeerFlow
+Multi-user workspace cho team       → DeerFlow
+Nhắn Telegram lúc 7am hỏi tin       → OpenClaw
+Nhắc meeting sau 30 phút            → OpenClaw
+Monitor PR và ping khi merge        → OpenClaw
+Chạy cron job kiểm tra server       → OpenClaw
+```
+
+### Điều DeerFlow làm tốt hơn
+
+**LoopDetectionMiddleware** là thứ OpenClaw không có nhưng nên có. Khi agent gọi tool lặp đi lặp lại, DeerFlow tự detect và force-stop sau 5 lần. Đơn giản nhưng critical cho production.
+
+**Memory schema** của DeerFlow granular hơn — phân biệt `workContext` vs `personalContext` vs `topOfMind` giúp LLM recall đúng loại thông tin. OpenClaw dùng MEMORY.md free-form linh hoạt hơn nhưng recall ít chính xác hơn.
+
+### Điều OpenClaw làm tốt hơn
+
+**Heartbeat system** — OpenClaw tự động check email, calendar, mentions và proactive notify. DeerFlow hoàn toàn reactive, không làm gì nếu bạn không hỏi.
+
+**Channel diversity** — Signal, WhatsApp, Discord ngoài Telegram. Đặc biệt quan trọng nếu team dùng nhiều platform khác nhau.
+
+**clawhub.com** — Skills marketplace cho phép install/update features không cần code. DeerFlow phải tự viết tools.
+
+### Verdict
+
+Nếu build **SaaS có AI feature** → DeerFlow SDK.  
+Nếu cần **personal assistant 24/7** → OpenClaw.  
+Nếu có budget → Cả hai: OpenClaw làm "daily driver", DeerFlow làm "heavy worker" khi cần.
+
+---
+
+*Tested: DeerFlow + Claude Sonnet 4.6 via CLIProxyAPI OAuth (không cần API key trực tiếp)*
